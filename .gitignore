@@ -16,3 +16,8 @@ build/
 htmlcov/
 .DS_Store
 Thumbs.db
+data/clients/
+venv/
+.venv/
+env/
+*.log
