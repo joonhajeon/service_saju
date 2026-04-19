@@ -12,7 +12,7 @@ def get_daeun(
 ) -> list[dict]:
     """
     대운 계산 (10년 단위, 최대 11개 = ~110세).
-    순행/역행: 양년+남성, 음년+여성 → 순행; 나머지 → 역행
+    순행/역행: 양년+여성(陽年女命), 음년+남성(陰年男命) → 순행; 양년+남성, 음년+여성 → 역행
     """
     year_gan_idx = CHEONGAN.index(year_gan)
     year_euyang = CHEONGAN_EUYANG[year_gan_idx]   # '양' or '음'
