@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}사주 분석{% endblock %}
+{% block content %}
+<div class="input-container">
+  <div class="tabs" id="personTabs">
+    <button class="tab active" data-idx="0" onclick="switchTab(0)">1번</button>
+  </div>
+  <button class="btn-add-tab" onclick="addTab()">+ 추가</button>
+
+  <div id="tabContents">
+    <div class="tab-content active" data-idx="0">
+      <div class="input-mode-toggle">
+        <button class="mode-btn active" onclick="setMode(0, 'direct')">직접 입력</button>
+        <button class="mode-btn" onclick="setMode(0, 'celebrity')">유명인 검색</button>
+      </div>
+
+      <div class="celebrity-search hidden" data-idx="0">
+        <input type="text" class="celebrity-input" placeholder="이름 입력 (예: 지드래곤)">
+        <button class="btn-search" onclick="searchCelebrity(0)">검색</button>
+        <div class="celebrity-results"></div>
+      </div>
+
+      <div class="direct-input" data-idx="0">
+        <div class="form-row">
+          <label>이름</label>
+          <input type="text" class="input-name" placeholder="이름 (선택)">
+        </div>
+        <div class="form-row">
+          <label>생년월일</label>
+          <input type="text" class="input-date" placeholder="YYYY.MM.DD">
+        </div>
+        <div class="form-row">
+          <label>시간</label>
+          <input type="text" class="input-time" placeholder="HH:MM (모르면 빈칸)">
+        </div>
+        <div class="form-row">
+          <label>성별</label>
+          <select class="input-gender">
+            <option value="여">여</option>
+            <option value="남">남</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label>커리어 타입</label>
+          <select class="input-career">
+            <option value="직장인">직장인</option>
+            <option value="사업가">사업가</option>
+            <option value="프리랜서">프리랜서</option>
+            <option value="연예인">연예인</option>
+            <option value="정치인">정치인</option>
+            <option value="공인·전문직">공인·전문직</option>
+            <option value="학생">학생</option>
+            <option value="주부">주부</option>
+            <option value="타입없음">타입 없음</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <button class="btn-analyze" onclick="startAnalysis()">⚡ 분석 시작</button>
+</div>
+{% endblock %}

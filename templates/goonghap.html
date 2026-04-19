@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}궁합{% endblock %}
+{% block content %}
+<div style="max-width:900px;margin:0 auto">
+  <h2 style="color:var(--accent);margin-bottom:16px">💑 궁합 분석</h2>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+    <div class="input-section">
+      <h3 style="color:var(--blue);margin-bottom:8px">첫 번째 사람</h3>
+      <input type="text" id="name1" class="form-input" placeholder="이름">
+      <input type="text" id="date1" class="form-input" placeholder="YYYY.MM.DD">
+      <input type="text" id="time1" class="form-input" placeholder="HH:MM (모르면 빈칸)">
+      <select id="gender1" class="form-input"><option value="여">여</option><option value="남">남</option></select>
+    </div>
+    <div class="input-section">
+      <h3 style="color:var(--red);margin-bottom:8px">두 번째 사람</h3>
+      <input type="text" id="name2" class="form-input" placeholder="이름">
+      <input type="text" id="date2" class="form-input" placeholder="YYYY.MM.DD">
+      <input type="text" id="time2" class="form-input" placeholder="HH:MM (모르면 빈칸)">
+      <select id="gender2" class="form-input"><option value="남">남</option><option value="여">여</option></select>
+    </div>
+  </div>
+
+  <button onclick="analyzeGoonghap()" style="width:100%;padding:12px;background:var(--accent);color:var(--bg);border:none;border-radius:6px;font-size:16px;font-weight:bold;cursor:pointer">💑 궁합 분석 시작</button>
+
+  <div id="goonghapResult" style="margin-top:24px;line-height:1.8"></div>
+</div>
+
+<script>
+async function analyzeGoonghap() {
+  const getPersonData = async (num) => {
+    const dateStr = document.getElementById(`date${num}`).value.replace(/\./g, '-');
+    const timeStr = document.getElementById(`time${num}`).value;
+    let hour = null, minute = null;
+    if (timeStr && timeStr.includes(':')) [hour, minute] = timeStr.split(':').map(Number);
+    const res = await fetch('/api/calculate', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ birth_date: dateStr, hour, minute, gender: document.getElementById(`gender${num}`).value }),
+    });
+    const data = await res.json();
+    return { name: document.getElementById(`name${num}`).value, saju: data.data };
+  };
+
+  const [person1, person2] = await Promise.all([getPersonData(1), getPersonData(2)]);
+  const result = document.getElementById('goonghapResult');
+  result.innerHTML = '<div style="color:var(--text-dim)">궁합 분석 중...</div>';
+  let content = '';
+
+  const res = await fetch('/api/goonghap-stream', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ person1, person2 }),
+  });
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+
+  function read() {
+    reader.read().then(({ done, value }) => {
+      if (done) return;
+      decoder.decode(value).split('\n\n').forEach(line => {
+        if (!line.startsWith('data: ')) return;
+        try {
+          const msg = JSON.parse(line.slice(6));
+          if (msg.type === 'text') {
+            content += msg.text.replace(/\\n/g, '\n');
+            result.innerHTML = markdownToHtml(content);
+          }
+        } catch(e) {}
+      });
+      read();
+    });
+  }
+  read();
+}
+</script>
+{% endblock %}

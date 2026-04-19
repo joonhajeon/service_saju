@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🔮 만세력 - {% block title %}{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/print.css') }}" media="print">
+</head>
+<body>
+  <nav class="navbar">
+    <span class="logo">🔮 만세력</span>
+    <div class="nav-links">
+      <a href="/" class="nav-link">사주 분석</a>
+      <a href="/clients" class="nav-link">내담자 목록</a>
+      <a href="/goonghap" class="nav-link">궁합</a>
+    </div>
+  </nav>
+  <main class="main-content">
+    {% block content %}{% endblock %}
+  </main>
+  <script src="{{ url_for('static', filename='js/input.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/display.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/stream.js') }}"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

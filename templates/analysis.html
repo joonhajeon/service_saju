@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}분석 결과{% endblock %}
+{% block content %}
+<div class="analysis-layout">
+  <div class="panel-left">
+    <div class="person-tabs" id="personResultTabs"></div>
+    <div class="saju-table-container" id="sajuTable"></div>
+    <div class="oheng-dist" id="ohengDist"></div>
+    <div class="daeun-container" id="daeunTable"></div>
+  </div>
+
+  <div class="panel-right">
+    <div class="doc-tabs">
+      <button class="doc-tab active" onclick="showDoc('doc1')">Doc 1</button>
+      <button class="doc-tab" onclick="showDoc('doc2')">Doc 2</button>
+      <button class="doc-tab" onclick="showDoc('doc3')">Doc 3</button>
+      <button class="btn-save" onclick="saveClient()">💾 저장</button>
+      <button class="btn-print" onclick="printDoc()">🖨 프린트</button>
+    </div>
+    <div id="doc1" class="doc-content active"></div>
+    <div id="doc2" class="doc-content hidden"></div>
+    <div id="doc3" class="doc-content hidden"></div>
+  </div>
+</div>
+{% endblock %}
