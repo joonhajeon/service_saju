@@ -49,13 +49,23 @@ def calculate_saju(
         {'gan': p['gan'], 'ji': p['ji']} for p in pillars.values()
     ])
     relations = get_all_relations(all_jiji)
-    daeun = get_daeun(birth_date, gender, year_gan, year_ji, month_gan, month_ji)
+
+    # Get daeun result (now returns dict)
+    daeun_result = get_daeun(birth_date, gender, year_gan, year_ji, month_gan, month_ji)
+
+    # Add sipshin to each daeun entry
+    for d in daeun_result['daeun']:
+        gan_idx = CHEONGAN.index(d['gan'])
+        d['sipshin_gan'] = get_sipshin(ilgan_idx, gan_idx)
+        d['sipshin_ji'] = get_sipshin_for_jiji(ilgan_idx, d['ji'])
 
     return {
         'pillars': pillars,
         'oheng': oheng_dist,
         'relations': relations,
-        'daeun': daeun,
+        'daeun': daeun_result['daeun'],
+        'daeun_start': daeun_result['start_age'],
+        'daeun_direction': daeun_result['direction'],
         'year_gan': year_gan,
         'ilgan': day_gan,
     }
