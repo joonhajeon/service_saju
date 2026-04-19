@@ -20,14 +20,24 @@ def test_daeun_has_gan_ji():
         assert 'ji' in d
         assert d['gan'] in ['甲','乙','丙','丁','戊','己','庚','辛','壬','癸']
 
-def test_daeun_yeokhaeng_for_yin_female():
-    # 辛년(음년) + 여성 → 역행 (월주에서 역방향)
-    # 월주 乙未 → 역행: 甲午, 癸巳, 壬辰...
+def test_daeun_sunhaeng_for_yin_female():
+    # 辛년(음년) + 여성 → 순행 (월주에서 순방향)
+    # 월주 乙未 → 순행: 丙申, 丁酉, 戊戌...
     result = get_daeun(date(1981, 7, 20), '여', '辛', '酉', '乙', '未')
-    assert result['direction'] == '역행'
+    assert result['direction'] == '순행'
     first = result['daeun'][0]
-    assert first['gan'] == '甲'  # 乙(1) - 1 = 0 → 甲
-    assert first['ji'] == '午'   # 未(7) - 1 = 6 → 午
+    assert first['gan'] == '丙'  # 乙(1) + 1 = 2 → 丙
+    assert first['ji'] == '申'   # 未(7) + 1 = 8 → 申
+
+def test_daeun_sunhaeng_for_yang_male():
+    # 庚년(양년) + 남성 → 순행 (월주 己卯 기준)
+    # 순행: 庚辰, 辛巳, 壬午...
+    result = get_daeun(date(1980, 4, 2), '남', '庚', '申', '己', '卯')
+    assert result['direction'] == '순행'
+    assert result['start_age'] == 1
+    first = result['daeun'][0]
+    assert first['gan'] == '庚'  # 己(5) + 1 = 6 → 庚
+    assert first['ji'] == '辰'   # 卯(3) + 1 = 4 → 辰
 
 def test_daeun_returns_dict_with_keys():
     result = get_daeun(date(1980, 4, 2), '남', '庚', '申', '戊', '辰')

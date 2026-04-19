@@ -47,7 +47,7 @@ def get_daeun(
 ) -> dict:
     """
     대운 계산 결과 반환.
-    순행/역행: 양년+여성(陽年女命), 음년+남성(陰年男命) → 순행; 양년+남성, 음년+여성 → 역행
+    순행/역행: 양년+남성(陽年男命), 음년+여성(陰年女命) → 순행; 음년+남성, 양년+여성 → 역행
 
     Returns:
         {
@@ -59,7 +59,7 @@ def get_daeun(
     year_gan_idx = CHEONGAN.index(year_gan)
     year_euyang = CHEONGAN_EUYANG[year_gan_idx]
     is_male = (gender == '남')
-    forward = (year_euyang == '양' and not is_male) or (year_euyang == '음' and is_male)
+    forward = (year_euyang == '양' and is_male) or (year_euyang == '음' and not is_male)
     direction = '순행' if forward else '역행'
 
     month_gan_idx = CHEONGAN.index(month_gan)
