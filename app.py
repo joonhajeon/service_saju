@@ -42,8 +42,8 @@ def api_calculate():
 @app.route('/api/celebrity-search')
 def celebrity_search():
     from saju.celebrity import search_celebrity
-    name = request.args.get('name', '')
-    results = search_celebrity(name)
+    query = request.args.get('query', request.args.get('name', ''))
+    results = search_celebrity(query)
     return jsonify(results)
 
 @app.route('/api/analyze-stream', methods=['POST'])

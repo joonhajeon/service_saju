@@ -15,8 +15,11 @@
       </div>
 
       <div class="celebrity-search hidden" data-idx="0">
-        <input type="text" class="celebrity-input" placeholder="이름 입력 (예: 지드래곤)">
-        <button class="btn-search" onclick="searchCelebrity(0)">검색</button>
+        <div style="display:flex;gap:6px;margin-bottom:4px">
+          <input type="text" class="celebrity-input" placeholder="예: 손흥민 / 축구선수 박지성 / 쿨의 김성수" style="flex:1">
+          <button class="btn-search" onclick="searchCelebrity(0)">검색</button>
+        </div>
+        <div style="color:#999;font-size:11px;margin-bottom:6px">이름만 입력하거나 "직업+이름"으로 입력하면 더 정확합니다</div>
         <div class="celebrity-results"></div>
       </div>
 

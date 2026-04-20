@@ -48,22 +48,33 @@ function setMode(idx, mode) {
 
 async function searchCelebrity(idx) {
   const content = document.querySelector(`.tab-content[data-idx="${idx}"]`);
-  const name = content.querySelector('.celebrity-input').value.trim();
-  if (!name) return;
+  const query = content.querySelector('.celebrity-input').value.trim();
+  if (!query) return;
 
-  const res = await fetch(`/api/celebrity-search?name=${encodeURIComponent(name)}`);
-  const results = await res.json();
   const container = content.querySelector('.celebrity-results');
+  container.innerHTML = '<div style="color:#999;font-size:12px">AI가 검색 중...</div>';
+
+  const res = await fetch(`/api/celebrity-search?query=${encodeURIComponent(query)}`);
+  const results = await res.json();
 
   container.innerHTML = '';
   if (results.length === 0) {
-    container.innerHTML = '<div style="color:#585b70;font-size:12px">검색 결과가 없습니다.</div>';
+    container.innerHTML = '<div style="color:#c62828;font-size:12px">검색 결과가 없습니다. 직업+이름으로 다시 시도해보세요.</div>';
     return;
   }
+
   results.forEach(r => {
     const btn = document.createElement('button');
     btn.className = 'celebrity-result-btn';
-    btn.textContent = `${r.name} (${r.birth_date})`;
+
+    const lunarStr = r.birth_date_lunar ? ` / 음력 ${r.birth_date_lunar}` : '';
+    const countryStr = r.birth_country && r.birth_country !== '대한민국' ? ` 🌏 ${r.birth_country}` : '';
+    const descStr = r.description ? ` · ${r.description}` : '';
+
+    btn.innerHTML = `
+      <div style="font-weight:bold">${r.name}${descStr}${countryStr}</div>
+      <div style="font-size:11px;color:#555;margin-top:2px">양력 ${r.birth_date}${lunarStr}</div>
+    `;
     btn.onclick = () => {
       content.querySelector('.input-date').value = r.birth_date.replace(/-/g, '.');
       content.querySelector('.input-name').value = r.name;
