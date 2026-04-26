@@ -1,6 +1,6 @@
 # app.py
 from flask import Flask, render_template, request, jsonify, Response
-from datetime import date
+from datetime import date, datetime
 import json
 import os
 from config import CLIENT_DATA_DIR
@@ -16,6 +16,10 @@ def index():
 @app.route('/analysis')
 def analysis():
     return render_template('analysis.html')
+
+@app.route('/multi-analysis')
+def multi_analysis():
+    return render_template('multi-analysis.html')
 
 @app.route('/clients')
 def clients_page():
@@ -73,11 +77,24 @@ def get_clients():
 def save_client():
     data = request.json
     client_id = data.get('id') or f"{data['name']}{data['birth_date'].replace('-', '')}"
-    data['id'] = client_id
-    data['updated_at'] = str(date.today())
-    if 'created_at' not in data:
-        data['created_at'] = str(date.today())
     fpath = os.path.join(CLIENT_DATA_DIR, f'{client_id}.json')
+
+    # 기존 데이터가 있으면 읽기
+    if os.path.exists(fpath):
+        with open(fpath, 'r', encoding='utf-8') as f:
+            existing = json.load(f)
+        # 기존 생성일 유지
+        data['created_at'] = existing.get('created_at', str(date.today()))
+        # 기존 documents가 있고 새 documents가 없으면 유지
+        if 'documents' not in data and 'documents' in existing:
+            data['documents'] = existing['documents']
+    else:
+        # 새 파일 생성
+        data['created_at'] = str(date.today())
+
+    data['id'] = client_id
+    data['updated_at'] = datetime.now().isoformat()
+
     with open(fpath, 'w', encoding='utf-8') as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
     return jsonify({'success': True, 'id': client_id})
@@ -89,6 +106,14 @@ def get_client(client_id):
         return jsonify({'error': 'not found'}), 404
     with open(fpath, encoding='utf-8') as f:
         return jsonify(json.load(f))
+
+@app.route('/api/clients/<client_id>', methods=['DELETE'])
+def delete_client(client_id):
+    fpath = os.path.join(CLIENT_DATA_DIR, f'{client_id}.json')
+    if not os.path.exists(fpath):
+        return jsonify({'error': 'not found'}), 404
+    os.remove(fpath)
+    return jsonify({'success': True})
 
 @app.route('/api/goonghap-stream', methods=['POST'])
 def goonghap_stream():

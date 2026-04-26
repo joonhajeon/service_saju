@@ -24,6 +24,7 @@ function addTab() {
   newContent.querySelector('.mode-btn:first-child').onclick = () => setMode(idx, 'direct');
   newContent.querySelector('.mode-btn:last-child').onclick = () => setMode(idx, 'celebrity');
   newContent.querySelector('.btn-search').onclick = () => searchCelebrity(idx);
+  newContent.querySelector('.celebrity-input').onkeydown = (e) => { if (e.key === 'Enter') searchCelebrity(idx); };
   newContent.querySelector('.celebrity-results').innerHTML = '';
   newContent.querySelector('.celebrity-search').classList.add('hidden');
   newContent.querySelector('.direct-input').classList.remove('hidden');
@@ -63,23 +64,55 @@ async function searchCelebrity(idx) {
     return;
   }
 
-  results.forEach(r => {
+  // 숨겨진 직접입력 필드에 값 채우기 (모드 전환 없이)
+  const fillPerson = (r, btn) => {
+    // 생년월일: null이면 경고 후 수동 입력 유도
+    if (!r.birth_date) {
+      content.querySelector('.input-date').value = '';
+      alert(`${r.name}의 생년월일을 찾을 수 없습니다.\n직접 입력해주세요. (예: 1990.09.05)`);
+    } else {
+      content.querySelector('.input-date').value = r.birth_date.replace(/-/g, '.');
+    }
+    content.querySelector('.input-name').value = r.name;
+
+    // 성별 설정
+    if (r.gender === '남' || r.gender === '여') {
+      content.querySelector('.input-gender').value = r.gender;
+    }
+
+    // 커리어 타입 설정
+    const careerSelect = content.querySelector('.input-career');
+    const validCareers = ['직장인','사업가','프리랜서','연예인','운동선수','정치인','공인·전문직','학생','주부','타입없음'];
+    if (r.career_type && validCareers.includes(r.career_type)) {
+      careerSelect.value = r.career_type;
+    }
+
+    // 선택된 카드 표시
+    container.querySelectorAll('.celebrity-result-btn').forEach(b => b.classList.remove('selected'));
+    if (btn) btn.classList.add('selected');
+  };
+
+  // 결과를 항상 카드로 표시 (1개든 여러 개든)
+  results.forEach((r, i) => {
     const btn = document.createElement('button');
     btn.className = 'celebrity-result-btn';
 
-    const lunarStr = r.birth_date_lunar ? ` / 음력 ${r.birth_date_lunar}` : '';
+    const lunarStr = r.birth_date_lunar ? `<br><span style="font-size:10px;opacity:0.85">음력 ${r.birth_date_lunar}</span>` : '';
     const countryStr = r.birth_country && r.birth_country !== '대한민국' ? ` 🌏 ${r.birth_country}` : '';
     const descStr = r.description ? ` · ${r.description}` : '';
+    const dateDisplay = r.birth_date ? `양력 ${r.birth_date}` : '<span style="color:#c62828">생년월일 미상</span>';
 
     btn.innerHTML = `
       <div style="font-weight:bold">${r.name}${descStr}${countryStr}</div>
-      <div style="font-size:11px;color:#555;margin-top:2px">양력 ${r.birth_date}${lunarStr}</div>
+      <div style="font-size:11px;margin-top:3px">${dateDisplay}${lunarStr}</div>
     `;
-    btn.onclick = () => {
-      content.querySelector('.input-date').value = r.birth_date.replace(/-/g, '.');
-      content.querySelector('.input-name').value = r.name;
-      setMode(idx, 'direct');
-    };
+    btn.onclick = () => fillPerson(r, btn);
+
+    // 결과가 1개면 자동 선택
+    if (results.length === 1) {
+      fillPerson(r, btn);
+    }
+
     container.appendChild(btn);
   });
 }
@@ -89,7 +122,11 @@ function collectPersonData() {
   document.querySelectorAll('.tab-content').forEach(content => {
     const rawDate = content.querySelector('.input-date').value.trim();
     if (!rawDate) return;
-    const dateStr = rawDate.replace(/\./g, '-');
+    // YYYY.MM.DD → YYYY-MM-DD, YYYYMMDD → YYYY-MM-DD
+    let dateStr = rawDate.replace(/\./g, '-').replace(/\//g, '-');
+    if (/^\d{8}$/.test(dateStr)) {
+      dateStr = `${dateStr.slice(0,4)}-${dateStr.slice(4,6)}-${dateStr.slice(6,8)}`;
+    }
 
     const timeStr = content.querySelector('.input-time').value.trim();
     let hour = null, minute = null;
@@ -120,14 +157,43 @@ async function startAnalysis() {
   try {
     const results = [];
     for (const p of people) {
-      const res = await fetch('/api/calculate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(p),
-      });
-      const data = await res.json();
+      let res, data;
+      try {
+        res = await fetch('/api/calculate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(p),
+        });
+      } catch (e) {
+        alert('서버에 연결할 수 없습니다.\nVS Code 터미널에서 python app.py 를 실행하세요.');
+        return;
+      }
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        alert(`계산 오류: ${errJson.error || '날짜 형식을 확인하세요 (예: 1980.09.18)'}`);
+        return;
+      }
+      data = await res.json();
       if (data.success) {
         results.push({ person: p, saju: data.data });
+
+        // 자동 저장: DB에 기본 정보 저장
+        try {
+          await fetch('/api/clients', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              name: p.name,
+              birth_date: p.birth_date,
+              birth_time: p.hour != null ? `${p.hour}:${String(p.minute || 0).padStart(2,'0')}` : null,
+              gender: p.gender,
+              career_type: p.career_type,
+              saju: data.data,
+            }),
+          });
+        } catch (e) {
+          console.error('자동 저장 실패:', e);
+        }
       } else {
         alert(`계산 오류: ${data.error}`);
         return;
@@ -137,7 +203,69 @@ async function startAnalysis() {
     sessionStorage.setItem('analysisData', JSON.stringify(results));
     window.location.href = '/analysis';
   } finally {
-    btn.textContent = '⚡ 분석 시작';
+    btn.textContent = '📊 사주팔자 보기';
     btn.disabled = false;
   }
+}
+
+async function saveOnly() {
+  const people = collectPersonData();
+  if (people.length === 0) { alert('생년월일을 입력해주세요.'); return; }
+  const btn = document.querySelector('.btn-save-only');
+  btn.textContent = '저장 중...'; btn.disabled = true;
+  try {
+    let savedCount = 0;
+    for (const p of people) {
+      let res, data;
+      try {
+        res = await fetch('/api/calculate', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(p) });
+      } catch(e) {
+        alert('서버에 연결할 수 없습니다.\nVS Code 터미널에서 python app.py 를 실행하세요.');
+        return;
+      }
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        alert(`계산 오류: ${errJson.error || '날짜 형식을 확인하세요 (예: 1980.09.18)'}`);
+        return;
+      }
+      data = await res.json();
+      if (!data.success) { alert(`오류: ${data.error}`); return; }
+      const payload = {
+        name: p.name, birth_date: p.birth_date,
+        birth_time: (p.hour !== null && p.hour !== undefined) ? `${String(p.hour).padStart(2,'0')}:${String(p.minute||0).padStart(2,'0')}` : null,
+        gender: p.gender, career_type: p.career_type, saju: data.data,
+      };
+      await fetch('/api/clients', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+      savedCount++;
+    }
+    alert(`${savedCount}명이 내담자 목록에 저장되었습니다.`);
+    clearForm();
+  } catch(e) {
+    alert('오류: ' + e.message);
+  } finally {
+    btn.textContent = '💾 저장하기'; btn.disabled = false;
+  }
+}
+
+function clearForm() {
+  // 탭이 여러 개면 1번 탭만 남기고 제거
+  document.querySelectorAll('.tab:not([data-idx="0"])').forEach(t => t.remove());
+  document.querySelectorAll('.tab-content:not([data-idx="0"])').forEach(c => c.remove());
+  tabCount = 1;
+  personData = [{}];
+
+  // 1번 탭 초기화
+  const content = document.querySelector('.tab-content[data-idx="0"]');
+  content.querySelectorAll('input').forEach(el => el.value = '');
+  content.querySelectorAll('select').forEach(el => el.selectedIndex = 0);
+  content.querySelector('.celebrity-results').innerHTML = '';
+  content.querySelector('.celebrity-search').classList.add('hidden');
+  content.querySelector('.direct-input').classList.remove('hidden');
+  content.querySelectorAll('.mode-btn').forEach((btn, i) => {
+    btn.classList.toggle('active', i === 0);
+  });
+
+  // 1번 탭 활성화
+  document.querySelector('.tab[data-idx="0"]').classList.add('active');
+  content.classList.add('active');
 }

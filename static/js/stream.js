@@ -59,6 +59,8 @@ function handleStreamMessage(msg) {
     if (el) el.innerHTML = `<div style="color:var(--red)">오류: ${msg.message}</div>`;
   } else if (msg.type === 'done') {
     console.log('분석 완료');
+    // AI 분석 결과를 sessionStorage에 저장
+    sessionStorage.setItem('docContents', JSON.stringify(window.docContents));
   }
 }
 
