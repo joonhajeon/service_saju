@@ -164,6 +164,124 @@ function jiCell(ji, size = 28) {
   return `<div class="saju-ji" style="background:${OHENG_BG[oheng]};color:white;font-size:${size}px;font-weight:${fw}">${ji}</div>`;
 }
 
+function computeRelations(pillars) {
+  const ORDER = ['시주','일주','월주','년주'];
+  const LABEL = ['시','일','월','년'];
+  const ganHighlight = {}; // key: '시'|'일'|'월'|'년', value: {type, label}
+  const jiHighlight  = {};
+  const badges = [];
+  const PRIORITY = {chung:4, hyung:3, pa:2, hap:1};
+
+  function setGan(pos, type, label) {
+    if (!ganHighlight[pos] || PRIORITY[type] > PRIORITY[ganHighlight[pos].type]) {
+      ganHighlight[pos] = {type, label};
+    }
+  }
+  function setJi(pos, type, label) {
+    if (!jiHighlight[pos] || PRIORITY[type] > PRIORITY[jiHighlight[pos].type]) {
+      jiHighlight[pos] = {type, label};
+    }
+  }
+
+  const gans = ORDER.map((k,i) => ({pos: LABEL[i], val: pillars[k]?.gan}));
+  const jis  = ORDER.map((k,i) => ({pos: LABEL[i], val: pillars[k]?.ji}));
+
+  // 천간합
+  HAP_CHEONGAN.forEach(({a, b, oheng}) => {
+    const pa = gans.find(g => g.val === a);
+    const pb = gans.find(g => g.val === b);
+    if (pa && pb) {
+      const label = `${pa.pos}간-${pb.pos}간 ${a}${b}합(${oheng})`;
+      setGan(pa.pos, 'hap', label);
+      setGan(pb.pos, 'hap', label);
+      badges.push(label);
+    }
+  });
+
+  // 지지 육합
+  HAP_YUKHAM.forEach(({a, b, oheng}) => {
+    const pa = jis.find(j => j.val === a);
+    const pb = jis.find(j => j.val === b);
+    if (pa && pb) {
+      const label = `${pa.pos}지-${pb.pos}지 ${a}${b}육합(${oheng})`;
+      setJi(pa.pos, 'hap', label);
+      setJi(pb.pos, 'hap', label);
+      badges.push(label);
+    }
+  });
+
+  // 지지 삼합 (2개 이상 있으면 반합으로 표시)
+  HAP_SAMHAP.forEach(({members, kukname}) => {
+    const found = jis.filter(j => members.includes(j.val));
+    if (found.length >= 2) {
+      const chars = found.map(f => f.val).join('');
+      const suffix = found.length === 3 ? '삼합' : '반합';
+      const label = `${found.map(f=>f.pos+'지').join('-')} ${chars}${suffix}(${kukname})`;
+      found.forEach(f => setJi(f.pos, 'hap', label));
+      badges.push(label);
+    }
+  });
+
+  // 지지 방합 (2개 이상)
+  HAP_BANGHAP.forEach(({members, oheng}) => {
+    const found = jis.filter(j => members.includes(j.val));
+    if (found.length >= 2) {
+      const chars = found.map(f => f.val).join('');
+      const label = `${found.map(f=>f.pos+'지').join('-')} ${chars}방합(${oheng})`;
+      found.forEach(f => setJi(f.pos, 'hap', label));
+      badges.push(label);
+    }
+  });
+
+  // 지지충
+  CHUNG_JIJI.forEach(([a, b]) => {
+    const pa = jis.find(j => j.val === a);
+    const pb = jis.find(j => j.val === b);
+    if (pa && pb) {
+      const label = `${pa.pos}지-${pb.pos}지 ${a}${b}충`;
+      setJi(pa.pos, 'chung', label);
+      setJi(pb.pos, 'chung', label);
+      badges.push(label);
+    }
+  });
+
+  // 지지형
+  HYUNG_JIJI.forEach(group => {
+    if (group.length === 1) {
+      // 자형: 같은 지지 2개 이상
+      const found = jis.filter(j => j.val === group[0]);
+      if (found.length >= 2) {
+        const label = `${found.map(f=>f.pos+'지').join('-')} ${group[0]}${group[0]}자형`;
+        found.forEach(f => setJi(f.pos, 'hyung', label));
+        badges.push(label);
+      }
+    } else {
+      const found = jis.filter(j => group.includes(j.val));
+      if (found.length >= 2) {
+        const chars = found.map(f => f.val).join('');
+        const suffix = group.length === 3 ? '삼형' : '형';
+        const label = `${found.map(f=>f.pos+'지').join('-')} ${chars}${suffix}`;
+        found.forEach(f => setJi(f.pos, 'hyung', label));
+        badges.push(label);
+      }
+    }
+  });
+
+  // 지지파
+  PA_JIJI.forEach(([a, b]) => {
+    const pa = jis.find(j => j.val === a);
+    const pb = jis.find(j => j.val === b);
+    if (pa && pb) {
+      const label = `${pa.pos}지-${pb.pos}지 ${a}${b}파`;
+      setJi(pa.pos, 'pa', label);
+      setJi(pb.pos, 'pa', label);
+      badges.push(label);
+    }
+  });
+
+  return {ganHighlight, jiHighlight, badges};
+}
+
 function renderSajuTable(sajuData) {
   const { pillars } = sajuData;
   const order = ['시주', '일주', '월주', '년주'];
