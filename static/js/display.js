@@ -18,6 +18,18 @@ function toggleCollapse(btn, wrapperId) {
 let currentPersonIdx = 0;
 let allAnalysisData = [];
 let selectedDaeunAge = null;
+let relationModeOn = false;
+
+function toggleRelationMode() {
+  relationModeOn = !relationModeOn;
+  const btn = document.getElementById('relationModeBtn');
+  if (btn) btn.style.background = relationModeOn ? '#e8f5e9' : '';
+  // 현재 표시 중인 사람의 사주 재렌더링
+  if (allAnalysisData[currentPersonIdx]) {
+    const item = allAnalysisData[currentPersonIdx];
+    document.getElementById('sajuTable').innerHTML = renderSajuTable(item.saju);
+  }
+}
 
 const CG = ['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'];
 const JJ = ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'];
@@ -286,8 +298,34 @@ function renderSajuTable(sajuData) {
   const { pillars } = sajuData;
   const order = ['시주', '일주', '월주', '년주'];
   const labels = ['시', '일', '월', '년'];
+  const REL_COLOR = {hap:'#2e7d32', chung:'#c62828', hyung:'#e65100', pa:'#757575'};
 
-  let html = `<table class="saju-table">`;
+  const rel = relationModeOn ? computeRelations(pillars) : null;
+
+  function ganCellRel(gan, posLabel) {
+    if (!rel || !rel.ganHighlight[posLabel]) return ganCell(gan);
+    const {type} = rel.ganHighlight[posLabel];
+    const color = REL_COLOR[type];
+    const inner = ganCell(gan);
+    return `<div style="outline:3px solid ${color};outline-offset:2px;border-radius:4px;display:inline-block">${inner}</div>`;
+  }
+  function jiCellRel(ji, posLabel) {
+    if (!rel || !rel.jiHighlight[posLabel]) return jiCell(ji);
+    const {type} = rel.jiHighlight[posLabel];
+    const color = REL_COLOR[type];
+    const inner = jiCell(ji);
+    return `<div style="outline:3px solid ${color};outline-offset:2px;border-radius:4px;display:inline-block">${inner}</div>`;
+  }
+
+  // 버튼 포함 헤더
+  let html = `<div style="display:flex;justify-content:flex-end;margin-bottom:4px">
+    <button id="relationModeBtn" onclick="toggleRelationMode()"
+      style="font-size:12px;padding:3px 10px;border:1px solid #ccc;border-radius:4px;cursor:pointer;background:${relationModeOn?'#e8f5e9':''}">
+      합·충·형·파
+    </button>
+  </div>`;
+
+  html += `<table class="saju-table">`;
 
   html += '<tr><th></th>';
   labels.forEach(l => html += `<th>${l}</th>`);
@@ -303,17 +341,17 @@ function renderSajuTable(sajuData) {
 
   // 천간 행
   html += '<tr><td style="color:#333;font-size:11px;font-weight:bold">천간</td>';
-  order.forEach(k => {
+  order.forEach((k, i) => {
     const p = pillars[k];
-    html += `<td>${ganCell(p.gan)}</td>`;
+    html += `<td>${ganCellRel(p.gan, labels[i])}</td>`;
   });
   html += '</tr>';
 
   // 지지 행
   html += '<tr><td style="color:#333;font-size:11px;font-weight:bold">지지</td>';
-  order.forEach(k => {
+  order.forEach((k, i) => {
     const p = pillars[k];
-    html += `<td>${jiCell(p.ji)}</td>`;
+    html += `<td>${jiCellRel(p.ji, labels[i])}</td>`;
   });
   html += '</tr>';
 
@@ -344,6 +382,25 @@ function renderSajuTable(sajuData) {
   html += '</tr>';
 
   html += '</table>';
+
+  // 관계 요약 배지
+  if (rel && rel.badges.length > 0) {
+    const BADGE_BG = {hap:'#e8f5e9', chung:'#ffebee', hyung:'#fff3e0', pa:'#f5f5f5'};
+    const BADGE_COLOR = {hap:'#2e7d32', chung:'#c62828', hyung:'#e65100', pa:'#757575'};
+    function badgeType(label) {
+      if (label.includes('충')) return 'chung';
+      if (label.includes('형')) return 'hyung';
+      if (label.includes('파')) return 'pa';
+      return 'hap';
+    }
+    html += `<div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:4px">`;
+    rel.badges.forEach(b => {
+      const t = badgeType(b);
+      html += `<span style="font-size:11px;padding:2px 8px;border-radius:10px;background:${BADGE_BG[t]};color:${BADGE_COLOR[t]};border:1px solid ${BADGE_COLOR[t]}">${b}</span>`;
+    });
+    html += `</div>`;
+  }
+
   return html;
 }
 
