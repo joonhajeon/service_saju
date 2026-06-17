@@ -65,6 +65,9 @@ const HAP_CHEONGAN = [
   {a:'丙',b:'辛',oheng:'수'},{a:'丁',b:'壬',oheng:'목'},
   {a:'戊',b:'癸',oheng:'화'}
 ];
+const CHUNG_CHEONGAN = [
+  ['甲','庚'], ['乙','辛'], ['丙','壬'], ['丁','癸']
+];
 const HAP_YUKHAM = [
   {a:'子',b:'丑',oheng:'토'},{a:'寅',b:'亥',oheng:'목'},
   {a:'卯',b:'戌',oheng:'화'},{a:'辰',b:'酉',oheng:'금'},
@@ -181,7 +184,7 @@ function computeRelations(pillars) {
   const LABEL = ['시','일','월','년'];
   const ganHighlight = {}; // key: '시'|'일'|'월'|'년', value: {type, label}
   const jiHighlight  = {};
-  const badges = [];
+  const ganHap = [], jiHap = [], ganChung = [], jiChung = [], hyung = [], pa = [];
   const PRIORITY = {chung:4, hyung:3, pa:2, hap:1};
 
   function setGan(pos, type, label) {
@@ -214,25 +217,37 @@ function computeRelations(pillars) {
 
   // 천간합
   HAP_CHEONGAN.forEach(({a, b, oheng}) => {
-    const pa = gans.find(g => g.val === a);
-    const pb = gans.find(g => g.val === b);
-    if (pa && pb) {
-      const label = `${pa.pos}간-${pb.pos}간 ${a}${b}합(${oheng})`;
-      setGan(pa.pos, 'hap', label);
-      setGan(pb.pos, 'hap', label);
-      badges.push(label);
+    const fa = gans.find(g => g.val === a);
+    const fb = gans.find(g => g.val === b);
+    if (fa && fb) {
+      const label = `${a}${b}합(${oheng})`;
+      setGan(fa.pos, 'hap', label);
+      setGan(fb.pos, 'hap', label);
+      ganHap.push(label);
+    }
+  });
+
+  // 천간충
+  CHUNG_CHEONGAN.forEach(([a, b]) => {
+    const fa = gans.find(g => g.val === a);
+    const fb = gans.find(g => g.val === b);
+    if (fa && fb) {
+      const label = `${a}${b}충`;
+      setGan(fa.pos, 'chung', label);
+      setGan(fb.pos, 'chung', label);
+      ganChung.push(label);
     }
   });
 
   // 지지 육합
   HAP_YUKHAM.forEach(({a, b, oheng}) => {
-    const pa = jis.find(j => j.val === a);
-    const pb = jis.find(j => j.val === b);
-    if (pa && pb) {
-      const label = `${pa.pos}지-${pb.pos}지 ${a}${b}육합(${oheng})`;
-      setJi(pa.pos, 'hap', label);
-      setJi(pb.pos, 'hap', label);
-      badges.push(label);
+    const fa = jis.find(j => j.val === a);
+    const fb = jis.find(j => j.val === b);
+    if (fa && fb) {
+      const label = `${a}${b}육합(${oheng})`;
+      setJi(fa.pos, 'hap', label);
+      setJi(fb.pos, 'hap', label);
+      jiHap.push(label);
     }
   });
 
@@ -242,9 +257,9 @@ function computeRelations(pillars) {
     if (found.length >= 2) {
       const chars = found.map(f => f.val).join('');
       const suffix = found.length === 3 ? '삼합' : '반합';
-      const label = `${found.map(f=>f.pos+'지').join('-')} ${chars}${suffix}(${kukname})`;
+      const label = `${chars}${suffix}(${kukname})`;
       found.forEach(f => setJi(f.pos, 'hap', label));
-      badges.push(label);
+      jiHap.push(label);
     }
   });
 
@@ -253,21 +268,21 @@ function computeRelations(pillars) {
     const found = jis.filter(j => members.includes(j.val));
     if (found.length >= 2) {
       const chars = found.map(f => f.val).join('');
-      const label = `${found.map(f=>f.pos+'지').join('-')} ${chars}방합(${oheng})`;
+      const label = `${chars}방합(${oheng})`;
       found.forEach(f => setJi(f.pos, 'hap', label));
-      badges.push(label);
+      jiHap.push(label);
     }
   });
 
   // 지지충
   CHUNG_JIJI.forEach(([a, b]) => {
-    const pa = jis.find(j => j.val === a);
-    const pb = jis.find(j => j.val === b);
-    if (pa && pb) {
-      const label = `${pa.pos}지-${pb.pos}지 ${a}${b}충`;
-      setJi(pa.pos, 'chung', label);
-      setJi(pb.pos, 'chung', label);
-      badges.push(label);
+    const fa = jis.find(j => j.val === a);
+    const fb = jis.find(j => j.val === b);
+    if (fa && fb) {
+      const label = `${a}${b}충`;
+      setJi(fa.pos, 'chung', label);
+      setJi(fb.pos, 'chung', label);
+      jiChung.push(label);
     }
   });
 
@@ -277,35 +292,35 @@ function computeRelations(pillars) {
       // 자형: 같은 지지 2개 이상
       const found = jis.filter(j => j.val === group[0]);
       if (found.length >= 2) {
-        const label = `${found.map(f=>f.pos+'지').join('-')} ${group[0]}${group[0]}자형`;
+        const label = `${group[0]}${group[0]}자형`;
         found.forEach(f => setJi(f.pos, 'hyung', label));
-        badges.push(label);
+        hyung.push(label);
       }
     } else {
       const found = jis.filter(j => group.includes(j.val));
       if (found.length >= 2) {
         const chars = found.map(f => f.val).join('');
         const suffix = group.length === 3 ? '삼형' : '형';
-        const label = `${found.map(f=>f.pos+'지').join('-')} ${chars}${suffix}`;
+        const label = `${chars}${suffix}`;
         found.forEach(f => setJi(f.pos, 'hyung', label));
-        badges.push(label);
+        hyung.push(label);
       }
     }
   });
 
   // 지지파
   PA_JIJI.forEach(([a, b]) => {
-    const pa = jis.find(j => j.val === a);
-    const pb = jis.find(j => j.val === b);
-    if (pa && pb) {
-      const label = `${pa.pos}지-${pb.pos}지 ${a}${b}파`;
-      setJi(pa.pos, 'pa', label);
-      setJi(pb.pos, 'pa', label);
-      badges.push(label);
+    const fa = jis.find(j => j.val === a);
+    const fb = jis.find(j => j.val === b);
+    if (fa && fb) {
+      const label = `${a}${b}파`;
+      setJi(fa.pos, 'pa', label);
+      setJi(fb.pos, 'pa', label);
+      pa.push(label);
     }
   });
 
-  return {ganHighlight, jiHighlight, badges};
+  return {ganHighlight, jiHighlight, groups: {ganHap, jiHap, ganChung, jiChung, hyung, pa}};
 }
 
 function renderSajuTable(sajuData) {
@@ -399,22 +414,29 @@ function renderSajuTable(sajuData) {
 
   html += '</table>';
 
-  // 관계 요약 배지
-  if (rel && rel.badges.length > 0) {
-    const BADGE_BG = {hap:'#e8f5e9', chung:'#ffebee', hyung:'#fff3e0', pa:'#f5f5f5'};
-    const BADGE_COLOR = {hap:'#2e7d32', chung:'#c62828', hyung:'#e65100', pa:'#757575'};
-    function badgeType(label) {
-      if (label.includes('충')) return 'chung';
-      if (label.includes('형')) return 'hyung';
-      if (label.includes('파')) return 'pa';
-      return 'hap';
+  // 합충형파 요약
+  if (rel) {
+    const { groups } = rel;
+    const ROW_DEFS = [
+      { key: 'ganHap',   label: '천간합' },
+      { key: 'jiHap',    label: '지지합' },
+      { key: 'ganChung', label: '천간충' },
+      { key: 'jiChung',  label: '지지충' },
+      { key: 'hyung',    label: '형' },
+      { key: 'pa',       label: '파' },
+    ];
+    const hasAny = ROW_DEFS.some(d => groups[d.key].length > 0);
+    if (hasAny) {
+      html += `<div style="margin-top:10px;font-size:12px;line-height:2;border-top:1px solid #eee;padding-top:8px">`;
+      ROW_DEFS.forEach(({ key, label }) => {
+        const items = groups[key];
+        const countStr = items.length === 0
+          ? '<span style="color:#aaa">없음</span>'
+          : `<strong>${items.length}개</strong>  ${items.join(' · ')}`;
+        html += `<div><span style="display:inline-block;width:44px;color:#666;font-weight:bold">${label}</span>${countStr}</div>`;
+      });
+      html += `</div>`;
     }
-    html += `<div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:4px">`;
-    rel.badges.forEach(b => {
-      const t = badgeType(b);
-      html += `<span style="font-size:11px;padding:2px 8px;border-radius:10px;background:${BADGE_BG[t]};color:${BADGE_COLOR[t]};border:1px solid ${BADGE_COLOR[t]}">${b}</span>`;
-    });
-    html += `</div>`;
   }
 
   return html;
