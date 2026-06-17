@@ -185,13 +185,27 @@ function computeRelations(pillars) {
   const PRIORITY = {chung:4, hyung:3, pa:2, hap:1};
 
   function setGan(pos, type, label) {
-    if (!ganHighlight[pos] || PRIORITY[type] > PRIORITY[ganHighlight[pos].type]) {
-      ganHighlight[pos] = {type, label};
+    if (!ganHighlight[pos]) {
+      ganHighlight[pos] = [{type, label}];
+    } else {
+      const arr = ganHighlight[pos];
+      // don't duplicate same type
+      if (arr.some(r => r.type === type)) return;
+      arr.push({type, label});
+      // sort by priority descending, keep top 2
+      arr.sort((a, b) => PRIORITY[b.type] - PRIORITY[a.type]);
+      if (arr.length > 2) arr.length = 2;
     }
   }
   function setJi(pos, type, label) {
-    if (!jiHighlight[pos] || PRIORITY[type] > PRIORITY[jiHighlight[pos].type]) {
-      jiHighlight[pos] = {type, label};
+    if (!jiHighlight[pos]) {
+      jiHighlight[pos] = [{type, label}];
+    } else {
+      const arr = jiHighlight[pos];
+      if (arr.some(r => r.type === type)) return;
+      arr.push({type, label});
+      arr.sort((a, b) => PRIORITY[b.type] - PRIORITY[a.type]);
+      if (arr.length > 2) arr.length = 2;
     }
   }
 
@@ -304,17 +318,19 @@ function renderSajuTable(sajuData) {
 
   function ganCellRel(gan, posLabel) {
     if (!rel || !rel.ganHighlight[posLabel]) return ganCell(gan);
-    const {type} = rel.ganHighlight[posLabel];
-    const color = REL_COLOR[type];
+    const [primary, secondary] = rel.ganHighlight[posLabel];
     const inner = ganCell(gan);
-    return `<div style="outline:3px solid ${color};outline-offset:2px;border-radius:4px;display:inline-block">${inner}</div>`;
+    const outline = `outline:3px solid ${REL_COLOR[primary.type]};outline-offset:2px;`;
+    const shadow = secondary ? `box-shadow:0 0 0 6px ${REL_COLOR[secondary.type]};` : '';
+    return `<div style="${outline}${shadow}border-radius:4px;display:inline-block">${inner}</div>`;
   }
   function jiCellRel(ji, posLabel) {
     if (!rel || !rel.jiHighlight[posLabel]) return jiCell(ji);
-    const {type} = rel.jiHighlight[posLabel];
-    const color = REL_COLOR[type];
+    const [primary, secondary] = rel.jiHighlight[posLabel];
     const inner = jiCell(ji);
-    return `<div style="outline:3px solid ${color};outline-offset:2px;border-radius:4px;display:inline-block">${inner}</div>`;
+    const outline = `outline:3px solid ${REL_COLOR[primary.type]};outline-offset:2px;`;
+    const shadow = secondary ? `box-shadow:0 0 0 6px ${REL_COLOR[secondary.type]};` : '';
+    return `<div style="${outline}${shadow}border-radius:4px;display:inline-block">${inner}</div>`;
   }
 
   // 버튼 포함 헤더
