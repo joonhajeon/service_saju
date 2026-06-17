@@ -1,5 +1,20 @@
 // static/js/display.js
 
+function toggleCollapse(btn, wrapperId) {
+  const wrapper = document.getElementById(wrapperId);
+  if (!wrapper) return;
+  const isCollapsed = wrapper.style.display === 'none';
+  wrapper.style.display = isCollapsed ? '' : 'none';
+  btn.textContent = isCollapsed ? '접기' : '펼치기';
+
+  // 세운 접기 시 월별 천간지지 영역도 함께 처리
+  if (wrapperId.endsWith('_wrap')) {
+    const monthlyId = wrapperId.replace(/_wrap$/, '_monthly');
+    const monthly = document.getElementById(monthlyId);
+    if (monthly) monthly.style.display = isCollapsed ? '' : 'none';
+  }
+}
+
 let currentPersonIdx = 0;
 let allAnalysisData = [];
 let selectedDaeunAge = null;
@@ -23,7 +38,7 @@ const HWAGAE_JI = new Set(['辰','戌','丑','未']);
 
 // 12운성 한글 변환
 const UNSEONG_KOR = {
-  '長生':'장생','沐浴':'목욕','冠帶':'관대','臨官':'임관',
+  '長生':'장생','沐浴':'목욕','冠帶':'관대','臨官':'건록',
   '帝旺':'제왕','衰':'쇠','病':'병','死':'사',
   '墓':'묘','絶':'절','胎':'태','養':'양'
 };
@@ -31,6 +46,42 @@ const UNSEONG_KOR = {
 // 壬·癸(임수·계수), 子·亥(자수·해수)는 검정 배경
 const CHEONGAN_BG_OVERRIDE = { '壬': '#1a1a1a', '癸': '#1a1a1a' };
 const JIJI_BG_OVERRIDE    = { '子': '#1a1a1a', '亥': '#1a1a1a' };
+
+// 합충형파 데이터
+const HAP_CHEONGAN = [
+  {a:'甲',b:'己',oheng:'토'},{a:'乙',b:'庚',oheng:'금'},
+  {a:'丙',b:'辛',oheng:'수'},{a:'丁',b:'壬',oheng:'목'},
+  {a:'戊',b:'癸',oheng:'화'}
+];
+const HAP_YUKHAM = [
+  {a:'子',b:'丑',oheng:'토'},{a:'寅',b:'亥',oheng:'목'},
+  {a:'卯',b:'戌',oheng:'화'},{a:'辰',b:'酉',oheng:'금'},
+  {a:'巳',b:'申',oheng:'수'},{a:'午',b:'未',oheng:'토'}
+];
+const HAP_SAMHAP = [
+  {members:['寅','午','戌'],kukname:'화국'},
+  {members:['申','子','辰'],kukname:'수국'},
+  {members:['亥','卯','未'],kukname:'목국'},
+  {members:['巳','酉','丑'],kukname:'금국'}
+];
+const HAP_BANGHAP = [
+  {members:['寅','卯','辰'],oheng:'목'},
+  {members:['巳','午','未'],oheng:'화'},
+  {members:['申','酉','戌'],oheng:'금'},
+  {members:['亥','子','丑'],oheng:'수'}
+];
+const CHUNG_JIJI = [
+  ['子','午'],['丑','未'],['寅','申'],['卯','酉'],['辰','戌'],['巳','亥']
+];
+const HYUNG_JIJI = [
+  ['寅','巳','申'], // 삼형
+  ['丑','戌','未'], // 삼형
+  ['子','卯'],      // 이형
+  ['辰'],['午'],['酉'],['亥'] // 자형
+];
+const PA_JIJI = [
+  ['子','酉'],['丑','辰'],['寅','亥'],['卯','午'],['巳','申'],['未','戌']
+];
 
 // 대운·세운 천간/지지 td 셀 스타일 (사주표와 동일한 색상 체계, 金은 테두리 없이 흰 배경)
 function ganTdStyle(gan, isCurrent) {
@@ -223,10 +274,12 @@ function renderOhengDist(oheng, pillars) {
   return html;
 }
 
-function renderDaeunTable(sajuData, birthYear) {
+function renderDaeunTable(sajuData, birthYear, daeunTableId, seunContainerId) {
   const { daeun: daeunRaw, daeun_start, daeun_direction, ilgan } = sajuData;
   const daeun = (daeunRaw || []).filter(d => d.age <= 100);
   const currentYear = new Date().getFullYear();
+  const tableId = daeunTableId || 'daeunTableEl';
+  const seunId  = seunContainerId || 'seunSection';
 
   // Find the current daeun age (현재 년도에 해당하는 대운)
   let currentDaeunAge = null;
@@ -239,17 +292,20 @@ function renderDaeunTable(sajuData, birthYear) {
   }
 
   let label = `🔄 대운 (대운수 ${daeun_start || '?'}) · ${daeun_direction || ''}`;
+  const daeunWrapperId = `${tableId}_wrap`;
   let html = `<div class="daeun-section">`;
-  html += `<div class="daeun-label">${label}</div>`;
-  html += `<div class="daeun-table-wrapper"><table class="daeun-table" id="daeunTableEl">`;
+  html += `<div class="daeun-label" style="display:flex;align-items:center;justify-content:space-between">${label}<button class="btn-collapse" onclick="toggleCollapse(this,'${daeunWrapperId}')">접기</button></div>`;
+  html += `<div id="${daeunWrapperId}" class="daeun-table-wrapper"><table class="daeun-table" id="${tableId}">`;
 
   // Helper function to add daeun-selected class for current year's daeun
   const daeunClass = (age) => (age === currentDaeunAge) ? ' daeun-selected' : '';
 
+  const onclick = (d) => `selectDaeun(${d.age}, '${d.gan}', '${d.ji}', ${birthYear}, '${tableId}', '${seunId}', '${ilgan||''}')`;
+
   // 나이 행
   html += '<tr><td>나이</td>';
   daeun.forEach(d => {
-    html += `<td data-age="${d.age}" class="${daeunClass(d.age)}" onclick="selectDaeun(${d.age}, '${d.gan}', '${d.ji}', ${birthYear})">${d.age}</td>`;
+    html += `<td data-age="${d.age}" class="${daeunClass(d.age)}" onclick="${onclick(d)}">${d.age}</td>`;
   });
   html += '</tr>';
 
@@ -257,21 +313,21 @@ function renderDaeunTable(sajuData, birthYear) {
   html += '<tr><td>십신(天)</td>';
   daeun.forEach(d => {
     const ss = d.sipshin_gan || getSipshin(ilgan, d.gan);
-    html += `<td data-age="${d.age}" class="${daeunClass(d.age)}" style="font-size:10px;color:#333;font-weight:bold" onclick="selectDaeun(${d.age}, '${d.gan}', '${d.ji}', ${birthYear})">${ss}</td>`;
+    html += `<td data-age="${d.age}" class="${daeunClass(d.age)}" style="font-size:10px;color:#333;font-weight:bold" onclick="${onclick(d)}">${ss}</td>`;
   });
   html += '</tr>';
 
   // 천간 행
   html += '<tr><td>천간</td>';
   daeun.forEach(d => {
-    html += `<td data-age="${d.age}" class="${daeunClass(d.age)}" style="${ganTdStyle(d.gan, false)}" onclick="selectDaeun(${d.age}, '${d.gan}', '${d.ji}', ${birthYear})">${d.gan}</td>`;
+    html += `<td data-age="${d.age}" class="${daeunClass(d.age)}" style="${ganTdStyle(d.gan, false)}" onclick="${onclick(d)}">${d.gan}</td>`;
   });
   html += '</tr>';
 
   // 지지 행
   html += '<tr><td>지지</td>';
   daeun.forEach(d => {
-    html += `<td data-age="${d.age}" class="${daeunClass(d.age)}" style="${jiTdStyle(d.ji, false)}" onclick="selectDaeun(${d.age}, '${d.gan}', '${d.ji}', ${birthYear})">${d.ji}</td>`;
+    html += `<td data-age="${d.age}" class="${daeunClass(d.age)}" style="${jiTdStyle(d.ji, false)}" onclick="${onclick(d)}">${d.ji}</td>`;
   });
   html += '</tr>';
 
@@ -279,7 +335,7 @@ function renderDaeunTable(sajuData, birthYear) {
   html += '<tr><td>십신(地)</td>';
   daeun.forEach(d => {
     const ss = d.sipshin_ji || getSipshinJiji(ilgan, d.ji);
-    html += `<td data-age="${d.age}" class="${daeunClass(d.age)}" style="font-size:10px;color:#333;font-weight:bold" onclick="selectDaeun(${d.age}, '${d.gan}', '${d.ji}', ${birthYear})">${ss}</td>`;
+    html += `<td data-age="${d.age}" class="${daeunClass(d.age)}" style="font-size:10px;color:#333;font-weight:bold" onclick="${onclick(d)}">${ss}</td>`;
   });
   html += '</tr>';
 
@@ -287,26 +343,29 @@ function renderDaeunTable(sajuData, birthYear) {
   return html;
 }
 
-function selectDaeun(startAge, daeunGan, daeunJi, birthYear) {
+function selectDaeun(startAge, daeunGan, daeunJi, birthYear, daeunTableId, seunContainerId, ilgan) {
+  const tableId = daeunTableId || 'daeunTableEl';
+  const seunId  = seunContainerId || 'seunSection';
   selectedDaeunAge = startAge;
 
   // 이전 선택 해제
-  document.querySelectorAll('#daeunTableEl td[data-age]').forEach(td => {
+  document.querySelectorAll(`#${tableId} td[data-age]`).forEach(td => {
     td.classList.remove('daeun-selected');
   });
 
   // 선택한 열 전체 하이라이트
-  document.querySelectorAll(`#daeunTableEl td[data-age="${startAge}"]`).forEach(td => {
+  document.querySelectorAll(`#${tableId} td[data-age="${startAge}"]`).forEach(td => {
     td.classList.add('daeun-selected');
   });
 
-  const item = allAnalysisData[currentPersonIdx];
-  renderSeunTable(startAge, birthYear, item.saju.ilgan);
+  // ilgan: 파라미터로 넘어오면 사용, 아니면 현재 분석 데이터에서 가져옴
+  const resolvedIlgan = ilgan || (allAnalysisData[currentPersonIdx] && allAnalysisData[currentPersonIdx].saju.ilgan);
+  renderSeunTable(startAge, birthYear, resolvedIlgan, seunId);
 }
 
-function renderSeunTable(daeunStartAge, birthYear, ilgan) {
+function renderSeunTable(daeunStartAge, birthYear, ilgan, seunContainerId) {
   const currentYear = new Date().getFullYear();
-  const seunContainer = document.getElementById('seunSection');
+  const seunContainer = document.getElementById(seunContainerId || 'seunSection');
   if (!seunContainer) return;
 
   const seunList = [];
@@ -322,9 +381,13 @@ function renderSeunTable(daeunStartAge, birthYear, ilgan) {
     });
   }
 
+  const baseId = seunContainerId || 'seunSection';
+  const seunWrapperId = `${baseId}_wrap`;
+  const monthlyContainerId = `${baseId}_monthly`;
+
   let html = `<div class="seun-section">`;
-  html += `<div class="seun-label">📅 세운 (${daeunStartAge}세 대운)</div>`;
-  html += `<div class="seun-table-wrapper"><table class="seun-table">`;
+  html += `<div class="seun-label" style="display:flex;align-items:center;justify-content:space-between">📅 세운 (${daeunStartAge}세 대운)<button class="btn-collapse" onclick="toggleCollapse(this,'${seunWrapperId}')">접기</button></div>`;
+  html += `<div id="${seunWrapperId}" class="seun-table-wrapper"><table class="seun-table">`;
 
   // 나이 행
   html += '<tr><td>나이</td>';
@@ -333,10 +396,12 @@ function renderSeunTable(daeunStartAge, birthYear, ilgan) {
   });
   html += '</tr>';
 
-  // 년도 행
+  // 년도 행 — 클릭 시 월별 펼침
   html += '<tr><td>년도</td>';
   seunList.forEach(s => {
-    html += `<td style="font-size:10px;color:#333">${s.year}년</td>`;
+    const isCur = s.year === currentYear;
+    const style = `font-size:10px;cursor:pointer;color:${isCur?'var(--accent)':'#333'};font-weight:${isCur?'bold':'normal'};text-decoration:underline dotted #aaa;`;
+    html += `<td id="seun-year-td-${baseId}-${s.year}" style="${style}" onclick="toggleMonthlyPillars(${s.year},'${monthlyContainerId}','${baseId}',this)">${s.year}년</td>`;
   });
   html += '</tr>';
 
@@ -368,8 +433,102 @@ function renderSeunTable(daeunStartAge, birthYear, ilgan) {
   });
   html += '</tr>';
 
-  html += '</table></div></div>';
+  html += '</table></div>';
+  // 월별 펼침 영역
+  html += `<div id="${monthlyContainerId}" style="margin-top:6px"></div>`;
+  html += '</div>';
   seunContainer.innerHTML = html;
+}
+
+// ── 월별 천간지지 펼침/접기 ──────────────────────────────────
+let _monthlyCache = {};   // year → data
+let _monthlyOpen = {};    // baseId → year (현재 열려있는 연도)
+
+async function toggleMonthlyPillars(year, containerId, baseId, tdEl) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+
+  // 이미 같은 연도가 열려있으면 닫기
+  if (_monthlyOpen[baseId] === year) {
+    container.innerHTML = '';
+    _monthlyOpen[baseId] = null;
+    // 강조 해제
+    document.querySelectorAll(`[id^="seun-year-td-${baseId}-"]`).forEach(el => el.style.background = '');
+    return;
+  }
+
+  // 다른 연도 열기 — 기존 강조 해제
+  document.querySelectorAll(`[id^="seun-year-td-${baseId}-"]`).forEach(el => el.style.background = '');
+  tdEl.style.background = '#fff3e0';
+  _monthlyOpen[baseId] = year;
+
+  container.innerHTML = '<div style="color:#aaa;font-size:12px;padding:6px">월별 데이터 로딩 중...</div>';
+
+  try {
+    if (!_monthlyCache[year]) {
+      const res = await fetch(`/api/monthly-pillars/${year}`);
+      _monthlyCache[year] = await res.json();
+    }
+    const data = _monthlyCache[year];
+    container.innerHTML = renderMonthlyTable(data, year, containerId, baseId);
+  } catch(e) {
+    container.innerHTML = `<div style="color:#c62828;font-size:12px">오류: ${e.message}</div>`;
+  }
+}
+
+function closeMonthlyPillars(containerId, baseId, year) {
+  const container = document.getElementById(containerId);
+  if (container) container.innerHTML = '';
+  _monthlyOpen[baseId] = null;
+  const td = document.getElementById(`seun-year-td-${baseId}-${year}`);
+  if (td) td.style.background = '';
+}
+
+function renderMonthlyTable(data, year, containerId, baseId) {
+  const months = data.months;
+
+  let html = `<div style="background:#fafafa;border:1px solid #e0e0e0;border-radius:8px;padding:10px;margin-top:4px">`;
+  html += `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">`;
+  html += `<span style="font-size:12px;font-weight:bold;color:var(--accent)">📆 ${year}년 월별 천간지지</span>`;
+  html += `<button onclick="closeMonthlyPillars('${containerId}','${baseId}',${year})" style="background:none;border:none;cursor:pointer;font-size:16px;color:#aaa;line-height:1;padding:0 4px" title="닫기">✕</button>`;
+  html += `</div>`;
+  html += `<div style="overflow-x:auto"><table style="border-collapse:collapse;font-size:11px;width:100%">`;
+
+  // 헤더 행: 월 이름 (寅월~丑월)
+  html += '<tr style="background:#f0f0f0">';
+  html += '<td style="padding:4px 6px;border:1px solid #ddd;font-weight:bold;white-space:nowrap">구분</td>';
+  months.forEach(m => {
+    html += `<td style="padding:4px 6px;border:1px solid #ddd;text-align:center;font-weight:bold">${m.ji}월</td>`;
+  });
+  html += '</tr>';
+
+  // 절입일 행
+  html += '<tr>';
+  html += '<td style="padding:4px 6px;border:1px solid #ddd;color:#888;white-space:nowrap">절입일</td>';
+  months.forEach(m => {
+    const d = m.jeorin_date.slice(5); // MM-DD
+    html += `<td style="padding:3px 4px;border:1px solid #ddd;text-align:center;font-size:10px;color:#666">${d}<br><span style="color:#aaa">${m.jeorin_name}</span></td>`;
+  });
+  html += '</tr>';
+
+  // 천간 행
+  html += '<tr>';
+  html += '<td style="padding:4px 6px;border:1px solid #ddd;color:#888;white-space:nowrap">천간</td>';
+  months.forEach(m => {
+    html += `<td style="padding:4px 6px;border:1px solid #ddd;text-align:center;${ganTdStyle(m.gan,false)}">${m.gan}</td>`;
+  });
+  html += '</tr>';
+
+  // 지지 행
+  html += '<tr>';
+  html += '<td style="padding:4px 6px;border:1px solid #ddd;color:#888;white-space:nowrap">지지</td>';
+  months.forEach(m => {
+    html += `<td style="padding:4px 6px;border:1px solid #ddd;text-align:center;${jiTdStyle(m.ji,false)}">${m.ji}</td>`;
+  });
+  html += '</tr>';
+
+  html += '</table></div></div>';
+  return html;
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -431,18 +590,35 @@ function showPerson(idx) {
     }
     const genderStr = p.gender || '';
     const careerStr = p.career_type && p.career_type !== '타입없음' ? ` · ${p.career_type}` : '';
-    // 나이 계산 (세는 나이)
+    // 나이 계산 (세는 나이) - 시간 옆에 표시
     let ageStr = '';
     if (p.birth_date) {
       const bYear = parseInt(p.birth_date.slice(0, 4), 10);
       const age = new Date().getFullYear() - bYear + 1;
-      ageStr = ` · ${age}세`;
+      ageStr = ` <span style="color:var(--accent);font-weight:bold">${age}세</span>`;
     }
-    infoEl.innerHTML = `<div class="person-info-bar">
-      <span class="person-info-date">${dateStr}</span>
-      <span class="person-info-time">${timeStr}</span>
-      <span class="person-info-misc">${genderStr}${careerStr}${ageStr}</span>
-    </div>`;
+    // 음력 날짜 표시 — 양력과 음력 모두 표시
+    let dateDisplay = '';
+    if (p.lunar_date) {
+      const ld = String(p.lunar_date).replace(/-/g, '.');
+      // 양력(변환) + 음력(원본) 둘 다 표시
+      dateDisplay = `<span class="person-info-date">${dateStr}</span>`
+        + `<span style="font-size:11px;color:#666;margin-left:5px">양력</span>`
+        + `<span style="margin:0 6px;color:#ccc">|</span>`
+        + `<span style="font-size:13px;font-weight:bold;color:var(--accent)">${ld}</span>`
+        + `<span style="font-size:11px;color:#666;margin-left:5px">음력</span>`;
+    } else {
+      dateDisplay = `<span class="person-info-date">${dateStr}</span>`;
+    }
+    infoEl.innerHTML = `
+      <div class="person-info-bar" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px">
+        <div>
+          ${dateDisplay}
+          <span class="person-info-time" style="margin-left:6px">${timeStr}</span>${ageStr}
+          <span class="person-info-misc">${genderStr}${careerStr}</span>
+        </div>
+        <button onclick="openEditForm(${idx})" style="font-size:12px;padding:3px 10px;background:var(--bg3);border:1px solid #ccc;border-radius:4px;cursor:pointer;white-space:nowrap">✏️ 수정</button>
+      </div>`;
   }
 
   document.getElementById('sajuTable').innerHTML = renderSajuTable(item.saju);
@@ -484,6 +660,144 @@ function showDoc(docId) {
 
 function printDoc() {
   window.print();
+}
+
+// ── 분석 화면 인라인 편집 ──────────────────────────────────────
+
+function openEditForm(idx) {
+  const item = allAnalysisData[idx];
+  if (!item) return;
+  const p = item.person;
+
+  const dateVal = (p.birth_date || '').replace(/-/g, '.');
+  const timeVal = (p.hour != null && p.hour !== '') ? `${String(p.hour).padStart(2,'0')}:${String(p.minute||0).padStart(2,'0')}` : '';
+  const careerOptions = ['직장인','사업가','프리랜서','연예인','운동선수','정치인','공인·전문직','학생','주부','타입없음']
+    .map(v => `<option value="${v}"${p.career_type===v?' selected':''}>${v}</option>`).join('');
+
+  const infoEl = document.getElementById('personInfo');
+  infoEl.innerHTML = `
+    <div class="edit-inline">
+      <div style="font-weight:bold;color:var(--accent);margin-bottom:10px;font-size:13px">✏️ 정보 수정</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div>
+          <label style="font-size:11px;color:#666">이름</label>
+          <input id="ei-name" class="form-input" value="${p.name||''}" style="margin-top:2px">
+        </div>
+        <div>
+          <label style="font-size:11px;color:#666">생년월일</label>
+          <div style="display:flex;gap:4px;margin-top:2px;margin-bottom:4px">
+            <button type="button" id="ei-cal-solar" class="cal-btn active" onclick="toggleEditCal('solar')">양력</button>
+            <button type="button" id="ei-cal-lunar" class="cal-btn" onclick="toggleEditCal('lunar')">음력</button>
+            <label id="ei-leap-row" class="lunar-leap-row" style="display:none;font-size:11px">
+              <input type="checkbox" id="ei-leap"> 윤달
+            </label>
+          </div>
+          <input id="ei-date" class="form-input" value="${dateVal}" placeholder="YYYY.MM.DD">
+        </div>
+        <div>
+          <label style="font-size:11px;color:#666">시간</label>
+          <input id="ei-time" class="form-input" value="${timeVal}" placeholder="HH:MM" style="margin-top:2px">
+        </div>
+        <div>
+          <label style="font-size:11px;color:#666">성별</label>
+          <select id="ei-gender" class="form-input" style="margin-top:2px">
+            <option value="여"${p.gender==='여'?' selected':''}>여</option>
+            <option value="남"${p.gender==='남'?' selected':''}>남</option>
+          </select>
+        </div>
+        <div style="grid-column:1/-1">
+          <label style="font-size:11px;color:#666">커리어 타입</label>
+          <select id="ei-career" class="form-input" style="margin-top:2px">${careerOptions}</select>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <button onclick="saveEditForm(${idx})" style="flex:1;padding:7px;background:var(--accent);color:white;border:none;border-radius:5px;cursor:pointer;font-weight:bold;font-size:13px">저장 후 재계산</button>
+        <button onclick="showPerson(${idx})" style="padding:7px 14px;background:var(--bg3);border:1px solid #ccc;border-radius:5px;cursor:pointer;font-size:13px">취소</button>
+      </div>
+    </div>`;
+}
+
+function toggleEditCal(type) {
+  document.getElementById('ei-cal-solar').classList.toggle('active', type === 'solar');
+  document.getElementById('ei-cal-lunar').classList.toggle('active', type === 'lunar');
+  document.getElementById('ei-leap-row').style.display = type === 'lunar' ? 'flex' : 'none';
+  if (type === 'solar') document.getElementById('ei-leap').checked = false;
+}
+
+async function saveEditForm(idx) {
+  const nameVal    = document.getElementById('ei-name').value.trim();
+  let   dateVal    = document.getElementById('ei-date').value.trim().replace(/\./g, '-');
+  const timeVal    = document.getElementById('ei-time').value.trim();
+  const genderVal  = document.getElementById('ei-gender').value;
+  const careerVal  = document.getElementById('ei-career').value;
+  const isLunar    = document.getElementById('ei-cal-lunar').classList.contains('active');
+  const isLeap     = document.getElementById('ei-leap').checked;
+
+  if (!dateVal) { alert('생년월일을 입력해주세요.'); return; }
+
+  // 음력 변환
+  if (isLunar) {
+    try {
+      const r = await fetch('/api/lunar-to-solar', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ birth_date: dateVal, is_leap: isLeap }),
+      });
+      const d = await r.json();
+      if (!d.success) { alert('음력 변환 오류: ' + d.error); return; }
+      dateVal = d.solar_date;
+    } catch(e) { alert('음력 변환 실패'); return; }
+  }
+
+  let hour = null, minute = null;
+  if (timeVal && timeVal.includes(':')) { [hour, minute] = timeVal.split(':').map(Number); }
+
+  // 사주 재계산
+  let saju;
+  try {
+    const r = await fetch('/api/calculate', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ birth_date: dateVal, hour, minute, gender: genderVal }),
+    });
+    const d = await r.json();
+    if (!d.success) { alert('계산 오류: ' + d.error); return; }
+    saju = d.data;
+  } catch(e) { alert('계산 실패'); return; }
+
+  // 메모리 업데이트
+  const item = allAnalysisData[idx];
+  item.person = { ...item.person, name: nameVal, birth_date: dateVal, hour, minute, gender: genderVal, career_type: careerVal };
+  item.saju = saju;
+  sessionStorage.setItem('analysisData', JSON.stringify(allAnalysisData));
+
+  // DB 저장 (자동)
+  const birthTime = hour != null ? `${String(hour).padStart(2,'0')}:${String(minute||0).padStart(2,'0')}` : null;
+  const clientId = item._clientId;
+  if (clientId) {
+    // 기존 저장된 내담자 → PUT 업데이트
+    await fetch(`/api/clients/${encodeURIComponent(clientId)}`, {
+      method:'PUT', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ name:nameVal, birth_date:dateVal, birth_time:birthTime, gender:genderVal, career_type:careerVal, saju }),
+    });
+  } else {
+    // 새로 저장
+    const r = await fetch('/api/clients', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ name:nameVal, birth_date:dateVal, birth_time:birthTime, gender:genderVal, career_type:careerVal, saju }),
+    });
+    const d = await r.json();
+    if (d.id) item._clientId = d.id;
+  }
+
+  // 탭 이름 업데이트
+  const tabs = document.querySelectorAll('#personResultTabs .tab');
+  if (tabs[idx]) tabs[idx].textContent = nameVal;
+
+  // 화면 재렌더
+  showPerson(idx);
+
+  // 저장 토스트
+  const toast = document.getElementById('saveToast');
+  if (toast) { toast.classList.remove('hidden'); setTimeout(() => toast.classList.add('hidden'), 2500); }
 }
 
 async function saveClient() {
