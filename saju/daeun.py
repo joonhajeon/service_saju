@@ -1,70 +1,87 @@
 """대운 계산 모듈."""
-from datetime import date
-from math import ceil
+from datetime import date, datetime
+from math import floor
 from saju.constants import CHEONGAN, JIJI, CHEONGAN_EUYANG
 
 
 def get_daeun(
-    birth_date: date,
+    birth_dt: datetime,
     gender: str,
     year_gan: str,
     year_ji: str,
     month_gan: str,
     month_ji: str,
+    il_gan: str = None,
 ) -> dict:
     """
     대운 계산 결과 반환.
-    순행/역행: 양년+남성, 음년+여성 → 순행; 양년+여성, 음년+남성 → 역행
+    순행/역행: 년간(年干) 음양 기준
+      양간년+남성, 음간년+여성 → 순행
+      양간년+여성, 음간년+남성 → 역행
 
     대운수:
-      순행 → 다음 절입일까지의 날수 ÷ 3 (올림)
-      역행 → 현재 월 절입일에서 생일까지의 날수 ÷ 3 (올림)
+      순행 → 다음 절입일까지의 날수 ÷ 3 (반올림)
+      역행 → 생일에서 현재 월 절입일까지의 날수 ÷ 3 (반올림)
     최소 1세.
     """
-    from saju.pillars import _find_jeorin_date
+    from saju.pillars import _find_jeorin_datetime
 
+    # 년간 음양 기준으로 순행/역행 결정
     year_gan_idx = CHEONGAN.index(year_gan)
     year_euyang = CHEONGAN_EUYANG[year_gan_idx]
     is_male = (gender == '남')
     forward = (year_euyang == '양' and is_male) or (year_euyang == '음' and not is_male)
     direction = '순행' if forward else '역행'
 
-    # 해당 연도의 12개 절입일 계산
-    year = birth_date.year
-    jeorin_dates = [_find_jeorin_date(year, i) for i in range(12)]
+    # 해당 연도의 12개 절입 datetime 계산
+    year = birth_dt.year
+    jeorin_dts = [_find_jeorin_datetime(year, i) for i in range(12)]
 
-    # 생일이 속한 월 절기 인덱스 찾기
+    # 생일이 속한 월 절기 인덱스 찾기 (datetime 비교)
     current_month_idx = None
+    prev_year_fallback = False  # 전년도 대설/소한월로 fallback 여부
     for i in range(11, -1, -1):
-        if birth_date >= jeorin_dates[i]:
+        if birth_dt >= jeorin_dts[i]:
             current_month_idx = i
             break
 
     if current_month_idx is None:
-        prev_sohan = _find_jeorin_date(year - 1, 11)
-        if birth_date >= prev_sohan:
+        # 입춘 이전: 전년도 대설(10) 또는 소한(11)월에 해당
+        prev_sohan = _find_jeorin_datetime(year - 1, 11)
+        prev_year_fallback = True
+        if birth_dt >= prev_sohan:
             current_month_idx = 11
         else:
             current_month_idx = 10
 
-    # 대운수 계산
+    # 대운수 계산 — datetime 기반으로 분 단위 정밀 계산
     if forward:
-        # 순행: 다음 절입일까지의 날수
-        if current_month_idx < 11:
-            next_jeorin = _find_jeorin_date(year, current_month_idx + 1)
+        # 순행: 다음 절입 datetime까지의 날수
+        if prev_year_fallback:
+            if current_month_idx < 11:
+                next_jeorin = _find_jeorin_datetime(year - 1, current_month_idx + 1)
+            else:
+                next_jeorin = _find_jeorin_datetime(year, 0)
+        elif current_month_idx < 11:
+            next_jeorin = _find_jeorin_datetime(year, current_month_idx + 1)
         else:
-            next_jeorin = _find_jeorin_date(year + 1, 0)
-        days = (next_jeorin - birth_date).days
+            # 소한월(11)의 다음 절기는 같은 해 입춘(0)
+            next_jeorin = _find_jeorin_datetime(year, 0)
+        days = (next_jeorin - birth_dt).days
     else:
-        # 역행: 현재 월 절입일에서 생일까지의 날수
-        # 소한(11)의 경우 특수 처리: prev_sohan 사용
-        if current_month_idx == 11:
-            current_jeorin = _find_jeorin_date(year - 1, 11)
+        # 역행: 현재 월 절입 datetime에서 생일까지의 날수
+        if prev_year_fallback:
+            if current_month_idx == 11:
+                current_jeorin = _find_jeorin_datetime(year - 1, 11)
+            else:
+                current_jeorin = _find_jeorin_datetime(year - 1, current_month_idx)
+        elif current_month_idx == 11:
+            current_jeorin = _find_jeorin_datetime(year - 1, 11)
         else:
-            current_jeorin = jeorin_dates[current_month_idx]
-        days = (birth_date - current_jeorin).days
+            current_jeorin = jeorin_dts[current_month_idx]
+        days = (birth_dt - current_jeorin).days
 
-    start_age = max(1, ceil(days / 3))  # 올림(ceil) 사용
+    start_age = max(1, floor(days / 3 + 0.5))  # 반올림: 1.333→1, 1.667→2, 6.333→6
 
     # 대운 목록 생성
     month_gan_idx = CHEONGAN.index(month_gan)
