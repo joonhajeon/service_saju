@@ -11,7 +11,6 @@ def get_daeun(
     year_ji: str,
     month_gan: str,
     month_ji: str,
-    il_gan: str = None,
 ) -> dict:
     """
     대운 계산 결과 반환.
@@ -72,10 +71,12 @@ def get_daeun(
         # 역행: 현재 월 절입 datetime에서 생일까지의 날수
         if prev_year_fallback:
             if current_month_idx == 11:
+                # _find_jeorin_datetime(y, 11)은 내부적으로 y+1 소한을 반환하므로 year-1을 전달해야 당해 소한을 얻음
                 current_jeorin = _find_jeorin_datetime(year - 1, 11)
             else:
                 current_jeorin = _find_jeorin_datetime(year - 1, current_month_idx)
         elif current_month_idx == 11:
+            # _find_jeorin_datetime(y, 11)은 내부적으로 y+1 소한을 반환하므로 year-1을 전달해야 당해 소한을 얻음
             current_jeorin = _find_jeorin_datetime(year - 1, 11)
         else:
             current_jeorin = jeorin_dts[current_month_idx]
