@@ -17,6 +17,10 @@ htmlcov/
 .DS_Store
 Thumbs.db
 data/clients/
+data/goonghap/
+data/folders.json
+data/goonghap_folders.json
+내담자/
 venv/
 .venv/
 env/

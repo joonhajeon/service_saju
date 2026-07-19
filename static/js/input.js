@@ -3,6 +3,33 @@
 let tabCount = 1;
 let personData = [{}];
 
+// ── 양력/음력 토글 ──
+function setCalType(idx, type) {
+  const content = document.querySelector(`.tab-content[data-idx="${idx}"]`);
+  if (!content) return;
+  const btns = content.querySelectorAll('.cal-btn');
+  btns.forEach((b, i) => b.classList.toggle('active', (i === 0 && type === 'solar') || (i === 1 && type === 'lunar')));
+  const leapRow = content.querySelector('.lunar-leap-row');
+  if (leapRow) leapRow.style.display = type === 'lunar' ? 'flex' : 'none';
+  if (type === 'solar') {
+    const leap = content.querySelector('.input-lunar-leap');
+    if (leap) leap.checked = false;
+  }
+}
+
+// 음력→양력 변환 (서버 API 호출)
+async function convertLunarIfNeeded(p) {
+  if (p.cal_type !== 'lunar') return p;
+  const res = await fetch('/api/lunar-to-solar', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ birth_date: p.birth_date, is_leap: p.lunar_leap }),
+  });
+  const data = await res.json();
+  if (!data.success) throw new Error(`음력 변환 오류: ${data.error}`);
+  // 음력 원본 날짜 보존, 양력으로 치환
+  return { ...p, birth_date: data.solar_date, lunar_date: p.birth_date };
+}
+
 function addTab() {
   if (tabCount >= 6) { alert('최대 6명까지 입력 가능합니다.'); return; }
   const idx = tabCount++;
@@ -28,6 +55,17 @@ function addTab() {
   newContent.querySelector('.celebrity-results').innerHTML = '';
   newContent.querySelector('.celebrity-search').classList.add('hidden');
   newContent.querySelector('.direct-input').classList.remove('hidden');
+  // 음력 버튼 초기화
+  const calBtns = newContent.querySelectorAll('.cal-btn');
+  if (calBtns.length >= 2) {
+    calBtns[0].onclick = () => setCalType(idx, 'solar');
+    calBtns[1].onclick = () => setCalType(idx, 'lunar');
+    calBtns[0].classList.add('active'); calBtns[1].classList.remove('active');
+  }
+  const leapRow = newContent.querySelector('.lunar-leap-row');
+  if (leapRow) leapRow.style.display = 'none';
+  const leapCheck = newContent.querySelector('.input-lunar-leap');
+  if (leapCheck) leapCheck.checked = false;
   document.getElementById('tabContents').appendChild(newContent);
 
   switchTab(idx);
@@ -101,10 +139,11 @@ async function searchCelebrity(idx) {
     const countryStr = r.birth_country && r.birth_country !== '대한민국' ? ` 🌏 ${r.birth_country}` : '';
     const descStr = r.description ? ` · ${r.description}` : '';
     const dateDisplay = r.birth_date ? `양력 ${r.birth_date}` : '<span style="color:#c62828">생년월일 미상</span>';
+    const conflictStr = r.conflict_note ? `<br><span style="font-size:10px;color:#e65100">${r.conflict_note}</span>` : '';
 
     btn.innerHTML = `
       <div style="font-weight:bold">${r.name}${descStr}${countryStr}</div>
-      <div style="font-size:11px;margin-top:3px">${dateDisplay}${lunarStr}</div>
+      <div style="font-size:11px;margin-top:3px">${dateDisplay}${lunarStr}${conflictStr}</div>
     `;
     btn.onclick = () => fillPerson(r, btn);
 
@@ -134,6 +173,11 @@ function collectPersonData() {
       [hour, minute] = timeStr.split(':').map(Number);
     }
 
+    // 양력/음력 구분
+    const lunarBtn = content.querySelector('.cal-btn:last-of-type');
+    const calType = lunarBtn && lunarBtn.classList.contains('active') ? 'lunar' : 'solar';
+    const lunarLeap = calType === 'lunar' && content.querySelector('.input-lunar-leap')?.checked;
+
     people.push({
       name: content.querySelector('.input-name').value.trim() || '이름없음',
       birth_date: dateStr,
@@ -141,13 +185,15 @@ function collectPersonData() {
       minute,
       gender: content.querySelector('.input-gender').value,
       career_type: content.querySelector('.input-career').value,
+      cal_type: calType,
+      lunar_leap: lunarLeap,
     });
   });
   return people;
 }
 
 async function startAnalysis() {
-  const people = collectPersonData();
+  let people = collectPersonData();
   if (people.length === 0) { alert('생년월일을 입력해주세요.'); return; }
 
   const btn = document.querySelector('.btn-analyze');
@@ -155,6 +201,11 @@ async function startAnalysis() {
   btn.disabled = true;
 
   try {
+    // 음력 → 양력 변환
+    try {
+      people = await Promise.all(people.map(p => convertLunarIfNeeded(p)));
+    } catch(e) { alert(e.message); return; }
+
     const results = [];
     for (const p of people) {
       let res, data;
@@ -179,18 +230,22 @@ async function startAnalysis() {
 
         // 자동 저장: DB에 기본 정보 저장
         try {
-          await fetch('/api/clients', {
+          const saveRes = await fetch('/api/clients', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               name: p.name,
               birth_date: p.birth_date,
-              birth_time: p.hour != null ? `${p.hour}:${String(p.minute || 0).padStart(2,'0')}` : null,
+              birth_time: p.hour != null ? `${String(p.hour).padStart(2,'0')}:${String(p.minute || 0).padStart(2,'0')}` : null,
               gender: p.gender,
               career_type: p.career_type,
               saju: data.data,
+              lunar_date: p.lunar_date || null,   // 음력 원본 날짜 보존
             }),
           });
+          const saveData = await saveRes.json();
+          // 클라이언트 ID 보존 (편집 시 사용)
+          if (saveData.id) results[results.length - 1]._clientId = saveData.id;
         } catch (e) {
           console.error('자동 저장 실패:', e);
         }
@@ -209,11 +264,16 @@ async function startAnalysis() {
 }
 
 async function saveOnly() {
-  const people = collectPersonData();
+  let people = collectPersonData();
   if (people.length === 0) { alert('생년월일을 입력해주세요.'); return; }
   const btn = document.querySelector('.btn-save-only');
   btn.textContent = '저장 중...'; btn.disabled = true;
   try {
+    // 음력 → 양력 변환
+    try {
+      people = await Promise.all(people.map(p => convertLunarIfNeeded(p)));
+    } catch(e) { alert(e.message); return; }
+
     let savedCount = 0;
     for (const p of people) {
       let res, data;
@@ -234,6 +294,7 @@ async function saveOnly() {
         name: p.name, birth_date: p.birth_date,
         birth_time: (p.hour !== null && p.hour !== undefined) ? `${String(p.hour).padStart(2,'0')}:${String(p.minute||0).padStart(2,'0')}` : null,
         gender: p.gender, career_type: p.career_type, saju: data.data,
+        lunar_date: p.lunar_date || null,
       };
       await fetch('/api/clients', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
       savedCount++;

@@ -2,8 +2,51 @@
 {% block title %}내담자 목록{% endblock %}
 {% block content %}
 <div class="clients-container">
-  <h2 style="color:var(--accent);margin-bottom:16px">📋 내담자 목록</h2>
+  <div class="clients-header" id="clientsHeader">
+    <!-- JS가 동적으로 렌더 -->
+  </div>
   <div id="clientsList"></div>
+</div>
+
+<!-- 내담자 편집 모달 (content 블록 안에 있어야 렌더링됨) -->
+<div id="clientEditOverlay" class="edit-overlay" style="display:none" onclick="if(event.target===this)closeClientEdit()">
+  <div id="clientEditModal" class="edit-modal">
+    <h3>✏️ 내담자 정보 수정</h3>
+    <div class="edit-row">
+      <label>이름</label>
+      <input id="cem-name" type="text" placeholder="이름">
+    </div>
+    <div class="edit-row">
+      <label>생년월일</label>
+      <div style="display:flex;gap:4px;margin-bottom:5px">
+        <button type="button" id="cem-cal-solar" class="cal-btn active" onclick="toggleCemCal('solar')">양력</button>
+        <button type="button" id="cem-cal-lunar" class="cal-btn" onclick="toggleCemCal('lunar')">음력</button>
+        <label id="cem-leap-row" class="lunar-leap-row" style="display:none;margin-left:4px">
+          <input type="checkbox" id="cem-leap"> 윤달
+        </label>
+      </div>
+      <input id="cem-date" type="text" placeholder="YYYY.MM.DD">
+    </div>
+    <div class="edit-row">
+      <label>시간 (모르면 빈칸)</label>
+      <input id="cem-time" type="text" placeholder="HH:MM">
+    </div>
+    <div class="edit-row">
+      <label>성별</label>
+      <select id="cem-gender">
+        <option value="여">여</option>
+        <option value="남">남</option>
+      </select>
+    </div>
+    <div class="edit-row">
+      <label>커리어 타입</label>
+      <select id="cem-career"></select>
+    </div>
+    <div class="edit-btns">
+      <button id="cem-save-btn" class="btn-edit-save" onclick="saveClientEdit()">저장</button>
+      <button class="btn-edit-cancel" onclick="closeClientEdit()">취소</button>
+    </div>
+  </div>
 </div>
 {% endblock %}
 {% block scripts %}

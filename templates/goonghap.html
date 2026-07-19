@@ -1,75 +1,498 @@
 {% extends "base.html" %}
 {% block title %}궁합{% endblock %}
 {% block content %}
-<div style="max-width:900px;margin:0 auto">
+<div style="max-width:1200px;margin:0 auto">
   <h2 style="color:var(--accent);margin-bottom:16px">💑 궁합 분석</h2>
 
+  <!-- ── 입력 패널 ── -->
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
-    <div class="input-section">
-      <h3 style="color:var(--blue);margin-bottom:8px">첫 번째 사람</h3>
-      <input type="text" id="name1" class="form-input" placeholder="이름">
-      <input type="text" id="date1" class="form-input" placeholder="YYYY.MM.DD">
-      <input type="text" id="time1" class="form-input" placeholder="HH:MM (모르면 빈칸)">
-      <select id="gender1" class="form-input"><option value="여">여</option><option value="남">남</option></select>
+
+    <!-- 첫 번째 사람 -->
+    <div class="input-section" id="section1">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <h3 style="color:var(--blue)">첫 번째 사람</h3>
+        <div style="display:flex;gap:4px">
+          <button onclick="setInputMode(1,'direct')" id="modeBtn1direct" class="mode-btn active" style="font-size:12px;padding:3px 10px">직접 입력</button>
+          <button onclick="setInputMode(1,'client')" id="modeBtn1client" class="mode-btn" style="font-size:12px;padding:3px 10px">내담자 선택</button>
+        </div>
+      </div>
+      <div id="directForm1">
+        <input type="text" id="name1" class="form-input" placeholder="이름">
+        <div style="margin-top:6px">
+          <div style="display:flex;align-items:center;gap:4px;margin-bottom:4px">
+            <button type="button" class="cal-btn active" onclick="setGCalType(1,'solar')">양력</button>
+            <button type="button" class="cal-btn" onclick="setGCalType(1,'lunar')">음력</button>
+            <label id="gLeapRow1" class="lunar-leap-row" style="display:none;margin-left:6px">
+              <input type="checkbox" id="gLeap1"> 윤달(閏月)
+            </label>
+          </div>
+          <input type="text" id="date1" class="form-input" placeholder="YYYY.MM.DD">
+        </div>
+        <input type="text" id="time1" class="form-input" placeholder="HH:MM (모르면 빈칸)" style="margin-top:6px">
+        <select id="gender1" class="form-input" style="margin-top:6px"><option value="여">여</option><option value="남">남</option></select>
+      </div>
+      <div id="clientForm1" style="display:none">
+        <div id="clientSelectUI1">
+          <input type="text" id="clientSearch1" class="form-input" placeholder="이름으로 검색..." oninput="filterClients(1)" style="margin-bottom:6px">
+          <div id="clientList1" style="max-height:200px;overflow-y:auto;border:1px solid var(--bg3);border-radius:4px;background:white"></div>
+        </div>
+        <div id="selectedDisplay1" style="display:none;background:var(--bg2);border-radius:6px;padding:12px 14px;border:2px solid var(--blue)">
+          <div style="display:flex;align-items:center;justify-content:space-between">
+            <div id="selectedInfo1" style="font-size:14px;line-height:1.6"></div>
+            <button onclick="clearSelection(1)" style="font-size:12px;padding:3px 10px;background:var(--bg3);border:1px solid #ccc;border-radius:4px;cursor:pointer;white-space:nowrap;margin-left:10px">변경</button>
+          </div>
+        </div>
+      </div>
     </div>
-    <div class="input-section">
-      <h3 style="color:var(--red);margin-bottom:8px">두 번째 사람</h3>
-      <input type="text" id="name2" class="form-input" placeholder="이름">
-      <input type="text" id="date2" class="form-input" placeholder="YYYY.MM.DD">
-      <input type="text" id="time2" class="form-input" placeholder="HH:MM (모르면 빈칸)">
-      <select id="gender2" class="form-input"><option value="남">남</option><option value="여">여</option></select>
+
+    <!-- 두 번째 사람 -->
+    <div class="input-section" id="section2">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <h3 style="color:var(--red)">두 번째 사람</h3>
+        <div style="display:flex;gap:4px">
+          <button onclick="setInputMode(2,'direct')" id="modeBtn2direct" class="mode-btn active" style="font-size:12px;padding:3px 10px">직접 입력</button>
+          <button onclick="setInputMode(2,'client')" id="modeBtn2client" class="mode-btn" style="font-size:12px;padding:3px 10px">내담자 선택</button>
+        </div>
+      </div>
+      <div id="directForm2">
+        <input type="text" id="name2" class="form-input" placeholder="이름">
+        <div style="margin-top:6px">
+          <div style="display:flex;align-items:center;gap:4px;margin-bottom:4px">
+            <button type="button" class="cal-btn active" onclick="setGCalType(2,'solar')">양력</button>
+            <button type="button" class="cal-btn" onclick="setGCalType(2,'lunar')">음력</button>
+            <label id="gLeapRow2" class="lunar-leap-row" style="display:none;margin-left:6px">
+              <input type="checkbox" id="gLeap2"> 윤달(閏月)
+            </label>
+          </div>
+          <input type="text" id="date2" class="form-input" placeholder="YYYY.MM.DD">
+        </div>
+        <input type="text" id="time2" class="form-input" placeholder="HH:MM (모르면 빈칸)" style="margin-top:6px">
+        <select id="gender2" class="form-input" style="margin-top:6px"><option value="남">남</option><option value="여">여</option></select>
+      </div>
+      <div id="clientForm2" style="display:none">
+        <div id="clientSelectUI2">
+          <input type="text" id="clientSearch2" class="form-input" placeholder="이름으로 검색..." oninput="filterClients(2)" style="margin-bottom:6px">
+          <div id="clientList2" style="max-height:200px;overflow-y:auto;border:1px solid var(--bg3);border-radius:4px;background:white"></div>
+        </div>
+        <div id="selectedDisplay2" style="display:none;background:var(--bg2);border-radius:6px;padding:12px 14px;border:2px solid var(--red)">
+          <div style="display:flex;align-items:center;justify-content:space-between">
+            <div id="selectedInfo2" style="font-size:14px;line-height:1.6"></div>
+            <button onclick="clearSelection(2)" style="font-size:12px;padding:3px 10px;background:var(--bg3);border:1px solid #ccc;border-radius:4px;cursor:pointer;white-space:nowrap;margin-left:10px">변경</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /입력 패널 -->
+
+  <!-- ── 사주팔자/대운/세운 비교 카드 (선택 후 자동 표시) ── -->
+  <div id="sajuComparison" style="display:none;margin-bottom:20px">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+      <div id="sajuCard1" style="border:2px solid var(--blue);border-radius:8px;padding:14px;background:white">
+        <div id="sajuCard1Content" style="color:#aaa;font-size:13px">첫 번째 사람을 선택하세요</div>
+      </div>
+      <div id="sajuCard2" style="border:2px solid var(--red);border-radius:8px;padding:14px;background:white">
+        <div id="sajuCard2Content" style="color:#aaa;font-size:13px">두 번째 사람을 선택하세요</div>
+      </div>
     </div>
   </div>
 
-  <button onclick="analyzeGoonghap()" style="width:100%;padding:12px;background:var(--accent);color:var(--bg);border:none;border-radius:6px;font-size:16px;font-weight:bold;cursor:pointer">💑 궁합 분석 시작</button>
+  <!-- ── 관계 유형 선택 ── -->
+  <div style="margin-bottom:16px;background:var(--bg2);border-radius:8px;padding:14px 16px;border:1px solid var(--bg3)">
+    <label style="font-weight:bold;font-size:14px;display:block;margin-bottom:10px">👥 두 사람의 관계</label>
+    <div style="display:flex;flex-wrap:wrap;gap:8px" id="relationBtns">
+      <button class="relation-btn active" data-val="연인" onclick="setRelationType(this)">💕 연인</button>
+      <button class="relation-btn" data-val="부부" onclick="setRelationType(this)">💍 부부</button>
+      <button class="relation-btn" data-val="부모-자식" onclick="setRelationType(this)">👨‍👦 부모-자식</button>
+      <button class="relation-btn" data-val="형제자매" onclick="setRelationType(this)">👫 형제자매</button>
+      <button class="relation-btn" data-val="친구(동성)" onclick="setRelationType(this)">🤝 친구(동성)</button>
+      <button class="relation-btn" data-val="친구(이성)" onclick="setRelationType(this)">😊 친구(이성)</button>
+      <button class="relation-btn" data-val="직장 상사-부하" onclick="setRelationType(this)">💼 직장</button>
+      <button class="relation-btn" data-val="비즈니스 파트너" onclick="setRelationType(this)">🤝 비즈니스</button>
+      <button class="relation-btn" data-val="경쟁/정치 상대" onclick="setRelationType(this)">⚔️ 경쟁/정치</button>
+      <button class="relation-btn" data-val="__custom__" onclick="setRelationType(this)">✏️ 직접 입력</button>
+    </div>
+    <input type="text" id="customRelationInput" class="form-input"
+      placeholder="관계를 직접 입력하세요... (예: 스승-제자)"
+      style="display:none;margin-top:10px;max-width:320px">
+  </div>
 
-  <div id="goonghapResult" style="margin-top:24px;line-height:1.8"></div>
+  <!-- ── 분석 버튼 ── -->
+  <button onclick="analyzeGoonghap()" id="analyzeBtn"
+    style="width:100%;padding:12px;background:var(--accent);color:white;border:none;border-radius:6px;font-size:16px;font-weight:bold;cursor:pointer;margin-bottom:8px">
+    💑 궁합 분석 시작
+  </button>
+
+  <!-- ── AI 분석 결과 ── -->
+  <div id="goonghapResultWrap" style="display:none;margin-top:16px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <span style="font-weight:bold;color:var(--accent);font-size:15px">📋 궁합 분석 결과</span>
+      <span id="saveStatus" style="font-size:12px;color:#aaa"></span>
+    </div>
+    <div id="goonghapResult" style="line-height:1.8;background:white;border:1px solid var(--bg3);border-radius:6px;padding:16px"></div>
+  </div>
 </div>
 
 <script>
-async function analyzeGoonghap() {
-  const getPersonData = async (num) => {
-    const dateStr = document.getElementById(`date${num}`).value.replace(/\./g, '-');
-    const timeStr = document.getElementById(`time${num}`).value;
+let allClients = [];
+const selectedClient = { 1: null, 2: null };
+const inputMode = { 1: 'direct', 2: 'direct' };
+const gCalType = { 1: 'solar', 2: 'solar' };
+let currentRelationType = '연인';
+
+function setRelationType(btn) {
+  document.querySelectorAll('.relation-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const val = btn.dataset.val;
+  const customInput = document.getElementById('customRelationInput');
+  if (val === '__custom__') {
+    customInput.style.display = '';
+    customInput.focus();
+    currentRelationType = customInput.value.trim() || '기타';
+    customInput.oninput = () => { currentRelationType = customInput.value.trim() || '기타'; };
+  } else {
+    customInput.style.display = 'none';
+    currentRelationType = val;
+  }
+}
+
+function setGCalType(num, type) {
+  gCalType[num] = type;
+  const form = document.getElementById(`directForm${num}`);
+  form.querySelectorAll('.cal-btn').forEach((b, i) =>
+    b.classList.toggle('active', (i === 0 && type === 'solar') || (i === 1 && type === 'lunar'))
+  );
+  const leapRow = document.getElementById(`gLeapRow${num}`);
+  if (leapRow) leapRow.style.display = type === 'lunar' ? 'flex' : 'none';
+  if (type === 'solar') {
+    const leap = document.getElementById(`gLeap${num}`);
+    if (leap) leap.checked = false;
+  }
+}
+
+async function convertGLunarIfNeeded(num, dateStr) {
+  if (gCalType[num] !== 'lunar') return dateStr;
+  const isLeap = document.getElementById(`gLeap${num}`)?.checked || false;
+  const res = await fetch('/api/lunar-to-solar', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ birth_date: dateStr, is_leap: isLeap }),
+  });
+  const data = await res.json();
+  if (!data.success) throw new Error(`음력 변환 오류: ${data.error}`);
+  return data.solar_date;
+}
+
+function formatBirthDate(bd) {
+  if (!bd) return '';
+  const s = String(bd).replace(/[-\.]/g, '');
+  if (s.length === 8) return `${s.slice(0,4)}.${s.slice(4,6)}.${s.slice(6,8)}`;
+  return bd;
+}
+
+async function loadClients() {
+  try {
+    const res = await fetch('/api/clients');
+    allClients = await res.json();
+    renderClientList(1);
+    renderClientList(2);
+  } catch(e) { console.error('내담자 로드 실패:', e); }
+}
+
+function renderClientList(num, filter = '') {
+  const container = document.getElementById(`clientList${num}`);
+  const filtered = filter
+    ? allClients.filter(c => c.name && c.name.includes(filter))
+    : allClients;
+  if (filtered.length === 0) {
+    container.innerHTML = '<div style="padding:10px;color:#999;font-size:13px">검색 결과 없음</div>';
+    return;
+  }
+  container.innerHTML = filtered.map(c => {
+    const isSel = selectedClient[num] && selectedClient[num].id === c.id;
+    return `<div onclick="selectClient(${num},'${c.id}')"
+      style="padding:8px 10px;cursor:pointer;border-bottom:1px solid var(--bg3);font-size:13px;${isSel?'background:#ede0f7;font-weight:bold':''}"
+      onmouseover="this.style.background='${isSel?'#ede0f7':'#f5f5f5'}'"
+      onmouseout="this.style.background='${isSel?'#ede0f7':'white'}'">
+      <span style="font-weight:bold">${c.name}</span>
+      <span style="color:#777;margin-left:8px;font-size:12px">${formatBirthDate(c.birth_date)} · ${c.gender||''}</span>
+    </div>`;
+  }).join('');
+}
+
+function filterClients(num) {
+  renderClientList(num, document.getElementById(`clientSearch${num}`).value.trim());
+}
+
+async function selectClient(num, id) {
+  const client = allClients.find(c => c.id === id);
+  if (!client) return;
+
+  let saju = client.saju;
+  try {
+    let birthDate = String(client.birth_date || '').replace(/\./g, '-');
+    const s = birthDate.replace(/-/g, '');
+    if (/^\d{8}$/.test(s)) birthDate = `${s.slice(0,4)}-${s.slice(4,6)}-${s.slice(6,8)}`;
     let hour = null, minute = null;
-    if (timeStr && timeStr.includes(':')) [hour, minute] = timeStr.split(':').map(Number);
+    if (client.birth_time) {
+      const p = client.birth_time.split(':');
+      if (p.length === 2) { hour = parseInt(p[0],10); minute = parseInt(p[1],10); }
+    }
     const res = await fetch('/api/calculate', {
-      method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ birth_date: dateStr, hour, minute, gender: document.getElementById(`gender${num}`).value }),
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ birth_date:birthDate, hour, minute, gender:client.gender }),
     });
     const data = await res.json();
-    return { name: document.getElementById(`name${num}`).value, saju: data.data };
-  };
+    if (data.success) saju = data.data;
+  } catch(e) {}
 
-  const [person1, person2] = await Promise.all([getPersonData(1), getPersonData(2)]);
-  const result = document.getElementById('goonghapResult');
-  result.innerHTML = '<div style="color:var(--text-dim)">궁합 분석 중...</div>';
+  selectedClient[num] = { ...client, saju };
+
+  // 선택 완료 표시
+  document.getElementById(`clientSelectUI${num}`).style.display = 'none';
+  document.getElementById(`selectedDisplay${num}`).style.display = '';
+  const dateStr = formatBirthDate(client.birth_date);
+  const timeStr = client.birth_time ? ` · ${client.birth_time}` : '';
+  document.getElementById(`selectedInfo${num}`).innerHTML =
+    `<strong style="font-size:16px">${client.name}</strong><br><span style="color:#555">${dateStr} · ${client.gender||''}${timeStr}</span>`;
+
+  // 사주 카드 렌더링 (정규화된 birthDate 전달)
+  renderPersonCard(num, client.name, saju, birthDate);
+}
+
+function clearSelection(num) {
+  selectedClient[num] = null;
+  document.getElementById(`clientSelectUI${num}`).style.display = '';
+  document.getElementById(`selectedDisplay${num}`).style.display = 'none';
+  document.getElementById(`clientSearch${num}`).value = '';
+  renderClientList(num);
+  // 카드를 빈 상태로 초기화
+  document.getElementById(`sajuCard${num}Content`).innerHTML =
+    `<span style="color:#aaa;font-size:13px">${num===1?'첫':'두'} 번째 사람을 선택하세요</span>`;
+  updateComparisonVisibility();
+}
+
+function setInputMode(num, mode) {
+  inputMode[num] = mode;
+  document.getElementById(`directForm${num}`).style.display = mode==='direct' ? '' : 'none';
+  document.getElementById(`clientForm${num}`).style.display = mode==='client' ? '' : 'none';
+  document.getElementById(`modeBtn${num}direct`).classList.toggle('active', mode==='direct');
+  document.getElementById(`modeBtn${num}client`).classList.toggle('active', mode==='client');
+}
+
+// 사주 카드 렌더링 (display.js 함수 재사용)
+function renderPersonCard(num, name, saju, birthDateRaw) {
+  // "1980-09-18", "1980.09.18", "19800918" 모든 형식에서 연도 추출
+  const _bds = String(birthDateRaw || '').replace(/[-\.]/g, '');
+  const birthYear = _bds.length >= 4 ? parseInt(_bds.slice(0, 4), 10) : 0;
+  const daeunTableId = `gDaeunTable-${num}`;
+  const seunContainerId = `gSeunSection-${num}`;
+
+  const sajuHtml  = saju ? renderSajuTable(saju) : '<p style="color:#c62828">사주 데이터 없음</p>';
+  const ohengHtml = saju ? renderOhengDist(saju.oheng, saju.pillars) : '';
+  const daeunHtml = (saju && birthYear) ? renderDaeunTable(saju, birthYear, daeunTableId, seunContainerId) : '';
+
+  document.getElementById(`sajuCard${num}Content`).innerHTML = `
+    <div style="font-size:15px;font-weight:bold;color:${num===1?'var(--blue)':'var(--red)'};margin-bottom:8px">${name||''}</div>
+    ${sajuHtml}
+    <div style="margin-top:10px">${ohengHtml}</div>
+    <div style="margin-top:10px">${daeunHtml}</div>
+    <div id="${seunContainerId}" style="margin-top:6px"></div>
+  `;
+
+  // 현재 대운의 세운 자동 렌더링
+  if (saju && saju.daeun && birthYear) {
+    const currentYear = new Date().getFullYear();
+    const currentDaeun = saju.daeun.find(d => {
+      const py = birthYear + d.age;
+      return py <= currentYear && currentYear < py + 10;
+    });
+    if (currentDaeun) {
+      setTimeout(() => renderSeunTable(currentDaeun.age, birthYear, saju.ilgan, seunContainerId), 0);
+    }
+  }
+
+  updateComparisonVisibility();
+}
+
+function updateComparisonVisibility() {
+  // 두 카드 중 하나라도 내용이 있으면 비교 섹션 표시
+  const c1 = document.getElementById('sajuCard1Content').textContent.trim();
+  const c2 = document.getElementById('sajuCard2Content').textContent.trim();
+  const hasContent = !c1.includes('선택하세요') || !c2.includes('선택하세요');
+  document.getElementById('sajuComparison').style.display = hasContent ? '' : 'none';
+}
+
+async function getPersonData(num) {
+  if (inputMode[num] === 'client') {
+    if (!selectedClient[num]) throw new Error(`${num}번째 사람을 선택해주세요.`);
+    return { name: selectedClient[num].name, saju: selectedClient[num].saju };
+  }
+  // 직접 입력 → 계산
+  let dateStr = document.getElementById(`date${num}`).value.replace(/\./g, '-');
+  if (!dateStr) throw new Error(`${num}번째 사람의 생년월일을 입력해주세요.`);
+  // 음력이면 양력으로 변환
+  dateStr = await convertGLunarIfNeeded(num, dateStr);
+  const timeStr = document.getElementById(`time${num}`).value;
+  let hour = null, minute = null;
+  if (timeStr && timeStr.includes(':')) [hour, minute] = timeStr.split(':').map(Number);
+  const gender = document.getElementById(`gender${num}`).value;
+  const name = document.getElementById(`name${num}`).value || `${num}번`;
+  const res = await fetch('/api/calculate', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ birth_date:dateStr, hour, minute, gender }),
+  });
+  const data = await res.json();
+  if (!data.success) throw new Error('사주 계산 실패');
+  // 직접 입력도 카드 렌더링
+  renderPersonCard(num, name, data.data, dateStr);
+  return { name, saju: data.data };
+}
+
+async function analyzeGoonghap() {
+  let person1, person2;
+  try {
+    [person1, person2] = await Promise.all([getPersonData(1), getPersonData(2)]);
+  } catch(e) { alert(e.message); return; }
+
+  // 결과 래퍼 표시
+  document.getElementById('goonghapResultWrap').style.display = '';
+  document.getElementById('saveStatus').textContent = '';
+
+  const resultEl = document.getElementById('goonghapResult');
+  resultEl.innerHTML = `<div style="color:var(--text-dim);padding:12px">
+    <span style="display:inline-block;background:var(--accent);color:white;border-radius:12px;padding:3px 12px;font-size:12px;font-weight:bold;margin-bottom:8px">${currentRelationType}</span><br>
+    궁합 분석 중...
+  </div>`;
+
+  // 분석 결과 영역으로 스크롤
+  resultEl.scrollIntoView({ behavior:'smooth', block:'start' });
+
+  // 관계 유형 최종 확인 (직접 입력 상태면 input 값 재확인)
+  const customInput = document.getElementById('customRelationInput');
+  if (customInput.style.display !== 'none' && customInput.value.trim()) {
+    currentRelationType = customInput.value.trim();
+  }
+
+  // 현재 분석 대상 저장
+  window._goonghapPersons = { person1, person2, relation_type: currentRelationType };
+
   let content = '';
-
   const res = await fetch('/api/goonghap-stream', {
-    method: 'POST', headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({ person1, person2 }),
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ person1, person2, relation_type: currentRelationType }),
   });
   const reader = res.body.getReader();
   const decoder = new TextDecoder();
+  let buffer = '';
+
+  async function autoSave(isComplete) {
+    if (!content || !window._goonghapPersons) return;
+    const { person1, person2, relation_type } = window._goonghapPersons;
+    const statusEl = document.getElementById('saveStatus');
+    statusEl.textContent = '저장 중...';
+    try {
+      const res = await fetch('/api/goonghap-save', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name1: person1.name,
+          name2: person2.name,
+          person1, person2,
+          relation_type: relation_type || '연인',
+          result: document.getElementById('goonghapResult').innerHTML,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        statusEl.textContent = isComplete ? '✅ 자동 저장 완료' : '✅ 자동 저장 (분석 중단됨)';
+        statusEl.style.color = '#4caf50';
+      }
+    } catch(e) {
+      statusEl.textContent = '저장 실패';
+      statusEl.style.color = '#c62828';
+    }
+  }
 
   function read() {
     reader.read().then(({ done, value }) => {
-      if (done) return;
-      decoder.decode(value).split('\n\n').forEach(line => {
-        if (!line.startsWith('data: ')) return;
+      if (done) {
+        if (content) autoSave(true);
+        return;
+      }
+      buffer += decoder.decode(value, { stream:true });
+      const parts = buffer.split('\n\n');
+      buffer = parts.pop();
+      parts.forEach(chunk => {
+        if (!chunk.startsWith('data: ')) return;
         try {
-          const msg = JSON.parse(line.slice(6));
+          const msg = JSON.parse(chunk.slice(6));
           if (msg.type === 'text') {
-            content += msg.text.replace(/\\n/g, '\n');
-            result.innerHTML = markdownToHtml(content);
+            content += msg.text.replace(/\\n/g,'\n').replace(/\\"/g,'"');
+            resultEl.innerHTML = markdownToHtml(content);
+          } else if (msg.type === 'error') {
+            const errMsg = msg.message || '알 수 없는 오류';
+            const isCredit = errMsg.includes('credit balance');
+            resultEl.innerHTML = `<div style="color:#c62828;padding:12px;background:#fff3f3;border-radius:6px;border:1px solid #ffcdd2">
+              ⚠️ ${isCredit ? 'AI 분석 서비스 크레딧이 부족합니다. 관리자에게 문의해주세요.' : '분석 중 오류가 발생했습니다: ' + errMsg}
+            </div>`;
+          } else if (msg.type === 'done') {
+            if (content) autoSave(true);
           }
         } catch(e) {}
       });
       read();
+    }).catch(() => {
+      // 네트워크 오류로 스트림 중단 시에도 그때까지 받은 내용 저장
+      if (content) autoSave(false);
     });
   }
   read();
 }
+
+// sessionStorage에서 넘어온 사람 데이터를 바로 패널에 적용
+// allClients 재조회 없이 저장된 saju 데이터를 그대로 사용
+function applyPersonFromStorage(num, p) {
+  setInputMode(num, 'client');
+
+  // selectedClient에 저장 (분석 시 사용)
+  selectedClient[num] = {
+    name: p.name,
+    birth_date: p.birth_date,
+    birth_time: p.birth_time || null,
+    gender: p.gender,
+    saju: p.saju,
+  };
+
+  // 선택 완료 UI 표시
+  document.getElementById(`clientSelectUI${num}`).style.display = 'none';
+  document.getElementById(`selectedDisplay${num}`).style.display = '';
+
+  const dateStr = formatBirthDate(p.birth_date);
+  const timeStr = p.birth_time ? ` · ${p.birth_time}` : '';
+  document.getElementById(`selectedInfo${num}`).innerHTML =
+    `<strong style="font-size:16px">${p.name}</strong><br>` +
+    `<span style="color:#555">${dateStr} · ${p.gender || ''}${timeStr}</span>`;
+
+  // 사주 카드 렌더링
+  if (p.saju) {
+    renderPersonCard(num, p.name, p.saju, p.birth_date);
+  }
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
+  // 내담자 목록은 "내담자 선택" 탭 클릭 시 사용하므로 백그라운드 로드
+  loadClients();
+
+  const stored = sessionStorage.getItem('goonghapData');
+  if (stored) {
+    try {
+      const people = JSON.parse(stored);
+      sessionStorage.removeItem('goonghapData');
+      if (Array.isArray(people) && people.length >= 2) {
+        applyPersonFromStorage(1, people[0]);
+        applyPersonFromStorage(2, people[1]);
+      }
+    } catch(e) { console.error('goonghapData 복원 실패:', e); }
+  }
+});
 </script>
 {% endblock %}

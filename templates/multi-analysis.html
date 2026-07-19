@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}사주 비교{% endblock %}
+{% block content %}
+<div class="multi-analysis-container">
+  <div class="multi-toolbar">
+    <button class="btn-back" onclick="history.back()">← 뒤로</button>
+    <span id="multiTitle" style="font-size:15px;font-weight:bold;color:var(--accent)"></span>
+    <div style="display:flex;gap:6px;margin-left:auto;align-items:center">
+      <button class="btn-collapse-all" onclick="collapseAll('daeun')">대운 모두 접기</button>
+      <button class="btn-collapse-all" onclick="collapseAll('seun')">세운 모두 접기</button>
+      <button class="btn-collapse-all btn-collapse-all--both" onclick="collapseAll('both')">대운/세운 모두 접기</button>
+      <button id="btnGoonghapFromMulti" class="btn-goonghap" onclick="goGoonghapFromMulti()" style="display:none">💑 궁합 분석</button>
+    </div>
+  </div>
+  <div class="multi-grid" id="multiGrid"></div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/multi-display.js') }}"></script>
+{% endblock %}

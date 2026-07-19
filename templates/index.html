@@ -16,7 +16,7 @@
 
       <div class="celebrity-search hidden" data-idx="0">
         <div style="display:flex;gap:6px;margin-bottom:4px">
-          <input type="text" class="celebrity-input" placeholder="예: 손흥민 / 축구선수 박지성 / 쿨의 김성수" style="flex:1">
+          <input type="text" class="celebrity-input" placeholder="예: 손흥민 / 축구선수 박지성 / 쿨의 김성수" style="flex:1" onkeydown="if(event.key==='Enter') searchCelebrity(0)">
           <button class="btn-search" onclick="searchCelebrity(0)">검색</button>
         </div>
         <div style="color:#999;font-size:11px;margin-bottom:6px">이름만 입력하거나 "직업+이름"으로 입력하면 더 정확합니다</div>
@@ -30,7 +30,16 @@
         </div>
         <div class="form-row">
           <label>생년월일</label>
-          <input type="text" class="input-date" placeholder="YYYY.MM.DD">
+          <div style="flex:1">
+            <div style="display:flex;align-items:center;gap:4px;margin-bottom:5px">
+              <button type="button" class="cal-btn active" onclick="setCalType(0,'solar')">양력</button>
+              <button type="button" class="cal-btn" onclick="setCalType(0,'lunar')">음력</button>
+              <label class="lunar-leap-row" style="display:none;margin-left:6px">
+                <input type="checkbox" class="input-lunar-leap"> 윤달(閏月)
+              </label>
+            </div>
+            <input type="text" class="input-date" placeholder="YYYY.MM.DD">
+          </div>
         </div>
         <div class="form-row">
           <label>시간</label>
@@ -50,6 +59,7 @@
             <option value="사업가">사업가</option>
             <option value="프리랜서">프리랜서</option>
             <option value="연예인">연예인</option>
+            <option value="운동선수">운동선수</option>
             <option value="정치인">정치인</option>
             <option value="공인·전문직">공인·전문직</option>
             <option value="학생">학생</option>
@@ -61,6 +71,9 @@
     </div>
   </div>
 
-  <button class="btn-analyze" onclick="startAnalysis()">⚡ 분석 시작</button>
+  <div class="btn-row">
+    <button class="btn-save-only" onclick="saveOnly()">💾 저장하기</button>
+    <button class="btn-analyze" onclick="startAnalysis()">📊 사주팔자 보기</button>
+  </div>
 </div>
 {% endblock %}
